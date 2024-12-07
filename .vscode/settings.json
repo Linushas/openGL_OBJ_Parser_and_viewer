@@ -1,0 +1,29 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "*.rmd": "markdown",
+        "windows.h": "c",
+        "game.h": "c",
+        "stdio.h": "c",
+        "stdbool.h": "c",
+        "xtree": "c",
+        "xutility": "c",
+        "tiles.h": "c",
+        "sdl_image.h": "c",
+        "sdl.h": "c",
+        "sdl_timer.h": "c",
+        "headsupdisplay.h": "c",
+        "iosfwd": "c",
+        "xlocbuf": "c",
+        "cmath": "c",
+        "xiosbase": "c",
+        "tower.h": "c",
+        "enemy.h": "c",
+        "format": "c",
+        "map": "c",
+        "iostream": "cpp",
+        "ostream": "cpp",
+        "sdl_ttf.h": "c",
+        "glew.h": "c"
+    }
+}
