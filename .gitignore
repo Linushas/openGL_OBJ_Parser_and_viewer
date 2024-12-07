@@ -1,3 +1,1 @@
-src/**.o
-src/**.exe
-**.exe
+src/build/**
