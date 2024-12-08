@@ -7,8 +7,8 @@
 
 #include <stdio.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_timer.h>
 #include <GL/glew.h>
+#include "shader.h"
 
 #define res         4               // 0=160*X 1=360*X 4=640*X ...
 #define aspectRatio 16/9
@@ -24,59 +24,120 @@ typedef struct eventHandler {
     int fullScreen;
 } EventH;
 
-void render();
+typedef struct windowModel {
+    SDL_Window *win;
+    SDL_GLContext glContext;
+} WindowModel;
+
+void render(unsigned int shaderProgram, unsigned int VAO);
 void getWindowEvents(EventH *eh, SDL_Window *win);
 void toggleFullscreen(EventH *eh, SDL_Window *win);
+int initializeWindow(WindowModel *wm);
 
 int main(int argc, char *argv[]) {
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-        printf("error initializing SDL: %s\n", SDL_GetError());
-        return 1;
+    WindowModel wm;
+    if(!initializeWindow(&wm)) return -1;
+    
+    float vertices[] = {
+        // Positions        // Colors
+        -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // Bottom-left (red)
+         0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // Bottom-right (green)
+         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // Top (blue)
+    };
+
+
+//-------------------------------------------------------------- VAO and VBO
+    // Create VAO and VBO
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0); 
+    glBindVertexArray(0); 
+
+    // Compile vertex shader
+    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    // Check for vertex shader compilation errors
+    int success;
+    char infoLog[512];
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        printf("Vertex Shader Compilation Failed:\n%s\n", infoLog);
     }
 
-    SDL_Window *win = SDL_CreateWindow("SDL2 3D Engine", 
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-        SW, SH, SDL_WINDOW_OPENGL);
+    // Compile fragment shader
+    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
 
-    SDL_GLContext glContext = SDL_GL_CreateContext(win);
-    if (!glContext) {
-        printf("Kunde inte skapa OpenGL-kontext: %s\n", SDL_GetError());
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return -1;
+    // Check for fragment shader compilation errors
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        printf("Fragment Shader Compilation Failed:\n%s\n", infoLog);
     }
 
-    glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) {
-        printf("Kunde inte initiera GLEW\n");
-        SDL_GL_DeleteContext(glContext);
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return -1;
+    // Link shaders into a program
+    unsigned int shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    // Check for linking errors
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        printf("Shader Program Linking Failed:\n%s\n", infoLog);
     }
 
-    glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-    printf("OpenGL version: %s\n", glGetString(GL_VERSION));
+    // Clean up shaders
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 
+
+//-------------------------------------------------------------- MAIN LOOP 
     EventH eh = {.running = 1, .fullScreen = 0};
-
-    // MAIN LOOP
     while(eh.running) {
-        getWindowEvents(&eh, win);
-        render();
-        SDL_GL_SwapWindow(win);
+        getWindowEvents(&eh, wm.win);
+        render(shaderProgram, VAO);
+        SDL_GL_SwapWindow(wm.win);
     }
 
-    SDL_GL_DeleteContext(glContext);
-    SDL_DestroyWindow(win);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteProgram(shaderProgram);
+
+    SDL_GL_DeleteContext(wm.glContext);
+    SDL_DestroyWindow(wm.win);
     SDL_Quit();
 
     return 0;
 }
 
-void render() {
+void render(unsigned int shaderProgram, unsigned int VAO) {
+    glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    
+
+    glUseProgram(shaderProgram);
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
 void getWindowEvents(EventH *eh, SDL_Window *win) {
@@ -104,4 +165,42 @@ void toggleFullscreen(EventH *eh, SDL_Window *win) {
     } else {
         SDL_SetWindowFullscreen(win, 0);
     }
+}
+
+int initializeWindow(WindowModel *wm) {
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+        printf("error initializing SDL: %s\n", SDL_GetError());
+        return 0;
+    }
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+    wm->win = SDL_CreateWindow("SDL2 3D Engine", 
+                                        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
+                                        SW, SH, SDL_WINDOW_OPENGL);
+
+    wm->glContext = SDL_GL_CreateContext(wm->win);
+    if (!wm->glContext) {
+        printf("Failed to create OpenGL context: %s\n", SDL_GetError());
+        SDL_DestroyWindow(wm->win);
+        SDL_Quit();
+        return 0;
+    }
+
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) {
+        printf("Failed to initialize GLEW\n");
+        SDL_GL_DeleteContext(wm->glContext);
+        SDL_DestroyWindow(wm->win);
+        SDL_Quit();
+        return 0;
+    }
+
+    // Enable V-Sync
+    SDL_GL_SetSwapInterval(1);
+
+    printf("OpenGL version: %s\n", glGetString(GL_VERSION));
+    return 1;
 }
