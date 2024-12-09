@@ -10,24 +10,27 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include "shader.h"
+#include "geometry.h"
 
 #define res         4               // 0=160*X 1=360*X 4=640*X ...
-#define aspectRatio 16/9
+#define aspectRatio (16.0f / 9.0f)
 #define SH          160*res
 #define SW          SH*aspectRatio
 #define SH2         SH/2
 #define SW2         SW/2
 #define FPS         60  
+#define sensitivity 0.01f
 //-----------------------------------------------------------------------
 typedef struct eventHandler {
     SDL_Event event;
     int running;
     int fullScreen;
-    int w,a,s,d;
     int r;
     int zoom;
     float mouseMotionX, mouseMotionY;
     int mouseDown;
+    int mouseMiddle;
+    int shift;
 } EventH;
 
 typedef struct windowModel {
@@ -35,29 +38,11 @@ typedef struct windowModel {
     SDL_GLContext glContext;
 } WindowModel;
 
-typedef struct vertex {
-    float x, y, z;
-    float r, g, b;
-    // float pos[3];
-    // float color[3];
-} Vertex;
-
-typedef struct triangle {
-    Vertex p[3];
-} Triangle;
-
-typedef struct cubeMesh {
-    // Vertex pos;
-    Vertex vertices[8];
-    unsigned int indices[36];
-    unsigned int VAO, VBO, EBO;
-} CubeMesh;
-
 typedef struct mat4x4 {
     float m[4][4];
 } Mat4x4;
 
-void render(unsigned int shaderProgram, EventH *eh);
+void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronMesh *tetra);
 void getWindowEvents(EventH *eh, WindowModel *wm);
 void toggleFullscreen(EventH *eh, WindowModel *wm);
 int initializeWindow(WindowModel *wm);
@@ -74,116 +59,59 @@ void createPerspectiveProjection(Mat4x4 *mat, float fov, float aspect, float zNe
 void createRotationMatrix(Mat4x4* model, float angleX, float angleY, float angleZ);
 void lookAt(Mat4x4* view, Vertex eye, Vertex target, Vertex up);
 
-CubeMesh createCubeMesh(float x, float y, float z);
-void renderCube(CubeMesh* cube, int mode);
 void loadShaders(unsigned int *shaderProgram);
-
-CubeMesh createCubeMesh(float x, float y, float z) {
-    CubeMesh cube = {
-        .vertices = {
-                // Pos                          // Color
-            {   x+-0.5f, y+-0.5f, z+-0.5f,      1.0f, 0.0f, 0.0f    },
-            {   x+0.5f,  y+-0.5f, z+-0.5f,      0.0f, 1.0f, 0.0f    },  
-            {   x+0.5f,  y+0.5f,  z+-0.5f,      0.0f, 0.0f, 1.0f    },  
-            {   x+-0.5f, y+0.5f,  z+-0.5f,      1.0f, 1.0f, 0.0f    },
-            {   x+-0.5f, y+-0.5f, z+0.5f,       1.0f, 0.0f, 1.0f    }, 
-            {   x+0.5f,  y+-0.5f, z+0.5f,       0.0f, 1.0f, 1.0f    },  
-            {   x+0.5f,  y+0.5f,  z+0.5f,       1.0f, 1.0f, 1.0f    },  
-            {   x+-0.5f, y+0.5f,  z+0.5f,       0.0f, 0.0f, 0.0f    }  
-        },
-        .indices = {
-            0, 1, 2, 2, 3, 0, // Back face
-            4, 5, 6, 6, 7, 4, // Front face
-            4, 0, 3, 3, 7, 4, // Left face
-            1, 5, 6, 6, 2, 1, // Right face
-            3, 2, 6, 6, 7, 3, // Top face
-            4, 5, 1, 1, 0, 4  // Bottom face
-        }
-    };
-
-    glGenVertexArrays(1, &cube.VAO);
-    glGenBuffers(1, &cube.VBO);
-    glGenBuffers(1, &cube.EBO);
-
-    glBindVertexArray(cube.VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, cube.VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cube.vertices), &cube.vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube.EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube.indices), cube.indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0); 
-    glBindVertexArray(0); 
-
-    return cube;
-}
-
-void renderCube(CubeMesh* cube, int mode) {
-    glBindVertexArray(cube->VAO);
-    glDrawElements(mode, 36, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
-}
 
 int main(int argc, char *argv[]) {
     WindowModel wm;
     if(!initializeWindow(&wm)) return -1;
 
-    CubeMesh cube1 = createCubeMesh(0.0f, 0.0f, 0.0f);
-    CubeMesh cube2 = createCubeMesh(1.5f, 0.0f, 0.0f);
+    CubeMesh cube2 = createCubeMesh(1.8f, 0.0f, 0.0f, 1.5f);
+    TetrahedronMesh tetra1 = createTetrahedronMesh(0.0f, 0.0f, 0.0f);
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
 
-    Mat4x4 model = {0};
-    Mat4x4 view = {0};
-    Mat4x4 projection = {0};
-
+    Mat4x4 model = {0}, view = {0}, projection = {0};
+    
     Vertex eye = {0.0f, 0.0f, 4.0f};
     Vertex target = {0.0f, 0.0f, 0.0f};
     Vertex up = {0.0f, 1.0f, 0.0f};
     setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
 
-
-//-------------------------------------------------------------- MAIN LOOP 
-
-    float angleX = 0.0f;
-    float angleY = 0.0f;
-    float angleZ = 0.0f;
+    float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
 
     EventH eh = {.running = 1, .fullScreen = 0, .r = 0};
+
+//-------------------------------------------------------------- MAIN LOOP 
     while(eh.running) {
         getWindowEvents(&eh, &wm);
 
-        if(eh.mouseDown == 1) {
-            if(abs(eh.mouseMotionX) > 3) target.x  += eh.mouseMotionX * 0.01f;
-            if(abs(eh.mouseMotionY) > 3) target.y += -eh.mouseMotionY * 0.01f;
+        if(eh.mouseDown) {
+            if(eh.mouseMiddle) {
+                if(eh.shift) {
+                    // Pan
+                    eye.x += -eh.mouseMotionX * sensitivity;
+                    eye.y += -eh.mouseMotionY * sensitivity/2;
+                    
+                    target.x += -eh.mouseMotionX * sensitivity;
+                    target.y += -eh.mouseMotionY * sensitivity;
+                }
+                else {
+                    // Orbit
+                    angleX += eh.mouseMotionY * sensitivity;
+                    angleY += eh.mouseMotionX * sensitivity;
+                }
+            }
         }
 
-        if(eh.w) {
-            eye.z -= 0.06f;
-            target.z -= 0.06f;
+        if (eh.zoom == 1) {
+            eye.z -= 0.2f; // Zoom in
+        } 
+        else if (eh.zoom == 2) {
+            eye.z += 0.2f; // Zoom out
         }
-        if(eh.a) {
-            eye.x -= 0.03f;
-            target.x -= 0.03f;
-        } 
-        if(eh.s) {
-            eye.z += 0.06f;
-            target.z += 0.06f;
-        } 
-        if(eh.d) {
-            eye.x += 0.03f;
-            target.x += 0.03f;
-        } 
 
         setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
-        
         createRotationMatrix(&model, angleX, angleY, angleZ);
         unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
         unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
@@ -192,27 +120,18 @@ int main(int argc, char *argv[]) {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view.m[0][0]);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection.m[0][0]);
 
-
-        glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glUseProgram(shaderProgram);
-        if(eh.r) renderCube(&cube1, GL_TRIANGLES);
-        else renderCube(&cube1, GL_LINE_LOOP);
-
-        if(eh.r) renderCube(&cube2, GL_TRIANGLES);
-        else renderCube(&cube2, GL_LINE_LOOP);
-        glBindVertexArray(0);
-
+        render(shaderProgram, &eh, &cube2, &tetra1);
 
         SDL_GL_SwapWindow(wm.win);
     }
 
-    glDeleteVertexArrays(1, &cube1.VAO);
-    glDeleteBuffers(1, &cube1.VBO);
     glDeleteVertexArrays(1, &cube2.VAO);
     glDeleteBuffers(1, &cube2.VBO);
-    glDeleteProgram(shaderProgram);
+    glDeleteVertexArrays(1, &tetra1.VAO);
+    glDeleteBuffers(1, &tetra1.VBO);
 
+    glDeleteProgram(shaderProgram);
+    
     SDL_GL_DeleteContext(wm.glContext);
     SDL_DestroyWindow(wm.win);
     SDL_Quit();
@@ -220,67 +139,67 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void render(unsigned int shaderProgram, EventH *eh) {
-    
+void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronMesh *tetra) {
+    glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(shaderProgram);
+    if(eh->r) {
+        renderCube(cube, GL_TRIANGLES);
+        renderTetrahedron(tetra, GL_TRIANGLES);
+    } 
+    else {
+        renderCube(cube, GL_LINE_LOOP);
+        renderTetrahedron(tetra, GL_LINE_LOOP);
+    } 
+    glBindVertexArray(0);
 }
 
 void getWindowEvents(EventH *eh, WindowModel *wm) {
     eh->zoom = 0;
+    eh->mouseMotionX = 0;
+    eh->mouseMotionY = 0;
+
     while(SDL_PollEvent(&(eh->event))) {
         switch(eh->event.type) {
             case SDL_QUIT: 
                 eh->running = 0; 
                 break;
+            
             case SDL_KEYDOWN: 
-                if(eh->event.key.keysym.sym == SDLK_f) {
+                if(eh->event.key.keysym.sym == SDLK_F11) {
                     toggleFullscreen(eh, wm);
-                }
-                if(eh->event.key.keysym.sym == SDLK_w) {
-                    eh->w = 1;
-                }
-                if(eh->event.key.keysym.sym == SDLK_a) {
-                    eh->a = 1;
-                }
-                if(eh->event.key.keysym.sym == SDLK_s) {
-                    eh->s = 1;
-                }
-                if(eh->event.key.keysym.sym == SDLK_d) {
-                    eh->d = 1;
                 }
                 if(eh->event.key.keysym.sym == SDLK_r) {
                     eh->r = !eh->r;
                 }
+                if(eh->event.key.keysym.sym == SDLK_LSHIFT) {
+                    eh->shift = 1;
+                }
                 break;
             case SDL_KEYUP:
-                if(eh->event.key.keysym.sym == SDLK_w) {
-                    eh->w = 0;
-                }
-                if(eh->event.key.keysym.sym == SDLK_a) {
-                    eh->a = 0;
-                }
-                if(eh->event.key.keysym.sym == SDLK_s) {
-                    eh->s = 0;
-                }
-                if(eh->event.key.keysym.sym == SDLK_d) {
-                    eh->d = 0;
+                if(eh->event.key.keysym.sym == SDLK_LSHIFT) {
+                    eh->shift = 0;
                 }
                 break;
+            
             case SDL_MOUSEBUTTONDOWN:
                 eh->mouseDown = 1;
+                if(eh->event.button.button == SDL_BUTTON_MIDDLE) eh->mouseMiddle = 1;
                 break;
             case SDL_MOUSEBUTTONUP:
                 eh->mouseDown = 0;
+                if(eh->event.button.button == SDL_BUTTON_MIDDLE) eh->mouseMiddle = 0;
                 break;
+            
             case SDL_MOUSEWHEEL:
-                if(eh->event.wheel.y > 0) // scroll up
-                {
-                    eh->zoom = 1;
-                }
-                else if(eh->event.wheel.y < 0) // scroll down
-                {
-                    eh->zoom = 2;
+                if (eh->event.wheel.y > 0) {
+                    eh->zoom = 1; // Zoom in
+                } 
+                else if (eh->event.wheel.y < 0) {
+                    eh->zoom = 2; // Zoom out
                 }
                 break;
+            
             case SDL_MOUSEMOTION:
                 eh->mouseMotionX = eh->event.motion.xrel;
                 eh->mouseMotionY = eh->event.motion.yrel;
