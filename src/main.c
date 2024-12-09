@@ -35,90 +35,107 @@ typedef struct windowModel {
     SDL_GLContext glContext;
 } WindowModel;
 
-typedef struct vec3d {
+typedef struct vertex {
     float x, y, z;
     float r, g, b;
-} Vec3d;
+    // float pos[3];
+    // float color[3];
+} Vertex;
 
 typedef struct triangle {
-    Vec3d p[3];
+    Vertex p[3];
 } Triangle;
 
-
 typedef struct cubeMesh {
-    Triangle tris[12];
+    // Vertex pos;
+    Vertex vertices[8];
+    unsigned int indices[36];
+    unsigned int VAO, VBO, EBO;
 } CubeMesh;
-
 
 typedef struct mat4x4 {
     float m[4][4];
 } Mat4x4;
 
-void render(unsigned int shaderProgram, unsigned int VAO, EventH *eh);
+void render(unsigned int shaderProgram, EventH *eh);
 void getWindowEvents(EventH *eh, WindowModel *wm);
 void toggleFullscreen(EventH *eh, WindowModel *wm);
 int initializeWindow(WindowModel *wm);
-Vec3d normalize(Vec3d v);
-Vec3d subtractVec3d(Vec3d v1, Vec3d v2);
-float dotProduct(Vec3d v1, Vec3d v2);
+
+Vertex normalize(Vertex v);
+Vertex subtractVec3d(Vertex v1, Vertex v2);
+float dotProduct(Vertex v1, Vertex v2);
 Mat4x4 multiplyMatrices(Mat4x4 a, Mat4x4 b);
-Vec3d multiplyMatrixVector(Mat4x4 mat, Vec3d vec);
-Vec3d crossProduct(Vec3d v1, Vec3d v2);
+Vertex multiplyMatrixVector(Mat4x4 mat, Vertex vec);
+Vertex crossProduct(Vertex v1, Vertex v2);
+
+void setupMatrices(Mat4x4 *model, Mat4x4 *view, Mat4x4 *projection, unsigned int shaderProgram, Vertex eye, Vertex target, Vertex up);
 void createPerspectiveProjection(Mat4x4 *mat, float fov, float aspect, float zNear, float zFar);
 void createRotationMatrix(Mat4x4* model, float angleX, float angleY, float angleZ);
-void lookAt(Mat4x4* view, Vec3d eye, Vec3d target, Vec3d up);
-CubeMesh createCubeMesh();
-void renderCube(unsigned int shaderProgram, unsigned int VAO, CubeMesh* cube);
+void lookAt(Mat4x4* view, Vertex eye, Vertex target, Vertex up);
+
+CubeMesh createCubeMesh(float x, float y, float z);
+void renderCube(CubeMesh* cube, int mode);
 void loadShaders(unsigned int *shaderProgram);
-void setupMatrices(Mat4x4 *model, Mat4x4 *view, Mat4x4 *projection, unsigned int shaderProgram, Vec3d eye, Vec3d target, Vec3d up);
 
-int main(int argc, char *argv[]) {
-    WindowModel wm;
-    if(!initializeWindow(&wm)) return -1;
-    
-    float cubeVertices[] = {
-        // Position             // Color
-        -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 0.0f,
-        0.5f, -0.5f, -0.5f,     0.0f, 1.0f, 0.0f,
-        0.5f,  0.5f, -0.5f,     0.0f, 0.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 1.0f,
-        0.5f, -0.5f,  0.5f,     0.0f, 1.0f, 1.0f,
-        0.5f,  0.5f,  0.5f,     1.0f, 1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,    0.0f, 0.0f, 0.0f
+CubeMesh createCubeMesh(float x, float y, float z) {
+    CubeMesh cube = {
+        .vertices = {
+                // Pos                          // Color
+            {   x+-0.5f, y+-0.5f, z+-0.5f,      1.0f, 0.0f, 0.0f    },
+            {   x+0.5f,  y+-0.5f, z+-0.5f,      0.0f, 1.0f, 0.0f    },  
+            {   x+0.5f,  y+0.5f,  z+-0.5f,      0.0f, 0.0f, 1.0f    },  
+            {   x+-0.5f, y+0.5f,  z+-0.5f,      1.0f, 1.0f, 0.0f    },
+            {   x+-0.5f, y+-0.5f, z+0.5f,       1.0f, 0.0f, 1.0f    }, 
+            {   x+0.5f,  y+-0.5f, z+0.5f,       0.0f, 1.0f, 1.0f    },  
+            {   x+0.5f,  y+0.5f,  z+0.5f,       1.0f, 1.0f, 1.0f    },  
+            {   x+-0.5f, y+0.5f,  z+0.5f,       0.0f, 0.0f, 0.0f    }  
+        },
+        .indices = {
+            0, 1, 2, 2, 3, 0, // Back face
+            4, 5, 6, 6, 7, 4, // Front face
+            4, 0, 3, 3, 7, 4, // Left face
+            1, 5, 6, 6, 2, 1, // Right face
+            3, 2, 6, 6, 7, 3, // Top face
+            4, 5, 1, 1, 0, 4  // Bottom face
+        }
     };
 
-    unsigned int cubeIndices[] = {
-        0, 1, 2, 2, 3, 0, // Back face
-        4, 5, 6, 6, 7, 4, // Front face
-        4, 0, 3, 3, 7, 4, // Left face
-        1, 5, 6, 6, 2, 1, // Right face
-        3, 2, 6, 6, 7, 3, // Top face
-        4, 5, 1, 1, 0, 4  // Bottom face
-    };
+    glGenVertexArrays(1, &cube.VAO);
+    glGenBuffers(1, &cube.VBO);
+    glGenBuffers(1, &cube.EBO);
 
-    unsigned int VAO, VBO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+    glBindVertexArray(cube.VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cube.VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube.vertices), &cube.vertices, GL_STATIC_DRAW);
 
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube.EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube.indices), cube.indices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
-
-    // Position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Color attribute
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
+
+    return cube;
+}
+
+void renderCube(CubeMesh* cube, int mode) {
+    glBindVertexArray(cube->VAO);
+    glDrawElements(mode, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+
+int main(int argc, char *argv[]) {
+    WindowModel wm;
+    if(!initializeWindow(&wm)) return -1;
+
+    CubeMesh cube1 = createCubeMesh(0.0f, 0.0f, 0.0f);
+    CubeMesh cube2 = createCubeMesh(1.5f, 0.0f, 0.0f);
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
@@ -127,9 +144,9 @@ int main(int argc, char *argv[]) {
     Mat4x4 view = {0};
     Mat4x4 projection = {0};
 
-    Vec3d eye = {0.0f, 0.0f, 4.0f};
-    Vec3d target = {0.0f, 0.0f, 0.0f};
-    Vec3d up = {0.0f, 1.0f, 0.0f};
+    Vertex eye = {0.0f, 0.0f, 4.0f};
+    Vertex target = {0.0f, 0.0f, 0.0f};
+    Vertex up = {0.0f, 1.0f, 0.0f};
     setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
 
 
@@ -175,13 +192,25 @@ int main(int argc, char *argv[]) {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view.m[0][0]);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection.m[0][0]);
 
-        render(shaderProgram, VAO, &eh);
+
+        glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glUseProgram(shaderProgram);
+        if(eh.r) renderCube(&cube1, GL_TRIANGLES);
+        else renderCube(&cube1, GL_LINE_LOOP);
+
+        if(eh.r) renderCube(&cube2, GL_TRIANGLES);
+        else renderCube(&cube2, GL_LINE_LOOP);
+        glBindVertexArray(0);
+
 
         SDL_GL_SwapWindow(wm.win);
     }
 
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
+    glDeleteVertexArrays(1, &cube1.VAO);
+    glDeleteBuffers(1, &cube1.VBO);
+    glDeleteVertexArrays(1, &cube2.VAO);
+    glDeleteBuffers(1, &cube2.VBO);
     glDeleteProgram(shaderProgram);
 
     SDL_GL_DeleteContext(wm.glContext);
@@ -191,14 +220,8 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void render(unsigned int shaderProgram, unsigned int VAO, EventH *eh) {
-    glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glUseProgram(shaderProgram);
-    glBindVertexArray(VAO);
-    if(eh->r) glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    else glDrawElements(GL_LINE_LOOP, 36, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+void render(unsigned int shaderProgram, EventH *eh) {
+    
 }
 
 void getWindowEvents(EventH *eh, WindowModel *wm) {
@@ -271,26 +294,15 @@ void toggleFullscreen(EventH *eh, WindowModel *wm) {
 
     if (eh->fullScreen) {
         SDL_SetWindowFullscreen(wm->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
-        SDL_ShowCursor(0);
+        // SDL_ShowCursor(0);
     } else {
         SDL_SetWindowFullscreen(wm->win, 0);
-        SDL_ShowCursor(1);
+        // SDL_ShowCursor(1);
     }
 
-    // Get the new window size
     int width, height;
     SDL_GetWindowSize(wm->win, &width, &height);
-
-    // Update OpenGL viewport
     glViewport(0, 0, width, height);
-
-    if (eh->fullScreen) {
-        SDL_SetWindowFullscreen(wm->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
-        SDL_ShowCursor(0);
-    } else {
-        SDL_SetWindowFullscreen(wm->win, 0);
-        SDL_ShowCursor(1);
-    }
 }
 
 int initializeWindow(WindowModel *wm) {
@@ -332,18 +344,18 @@ int initializeWindow(WindowModel *wm) {
     return 1;
 }
 
-Vec3d normalize(Vec3d v) {
+Vertex normalize(Vertex v) {
     float magnitude = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    Vec3d normalized = { v.x / magnitude, v.y / magnitude, v.z / magnitude };
+    Vertex normalized = { v.x / magnitude, v.y / magnitude, v.z / magnitude };
     return normalized;
 }
 
-Vec3d subtractVec3d(Vec3d v1, Vec3d v2) {
-    Vec3d result = {v1.x - v2.x, v1.y - v2.y, v1.z - v2.z};
+Vertex subtractVec3d(Vertex v1, Vertex v2) {
+    Vertex result = {v1.x - v2.x, v1.y - v2.y, v1.z - v2.z};
     return result;
 }
 
-float dotProduct(Vec3d v1, Vec3d v2) {
+float dotProduct(Vertex v1, Vertex v2) {
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
@@ -360,8 +372,8 @@ Mat4x4 multiplyMatrices(Mat4x4 a, Mat4x4 b) {
     return result;
 }
 
-Vec3d multiplyMatrixVector(Mat4x4 mat, Vec3d vec) {
-    Vec3d result = {
+Vertex multiplyMatrixVector(Mat4x4 mat, Vertex vec) {
+    Vertex result = {
         .x = mat.m[0][0] * vec.x + mat.m[0][1] * vec.y + mat.m[0][2] * vec.z + mat.m[0][3],
         .y = mat.m[1][0] * vec.x + mat.m[1][1] * vec.y + mat.m[1][2] * vec.z + mat.m[1][3],
         .z = mat.m[2][0] * vec.x + mat.m[2][1] * vec.y + mat.m[2][2] * vec.z + mat.m[2][3]
@@ -375,8 +387,8 @@ Vec3d multiplyMatrixVector(Mat4x4 mat, Vec3d vec) {
     return result;
 }
 
-Vec3d crossProduct(Vec3d v1, Vec3d v2) {
-    Vec3d cross = {
+Vertex crossProduct(Vertex v1, Vertex v2) {
+    Vertex cross = {
         v1.y * v2.z - v1.z * v2.y,
         v1.z * v2.x - v1.x * v2.z,
         v1.x * v2.y - v1.y * v2.x
@@ -411,10 +423,10 @@ void createRotationMatrix(Mat4x4* model, float angleX, float angleY, float angle
     model->m[3][3] = 1.0f;
 }
 
-void lookAt(Mat4x4* view, Vec3d eye, Vec3d target, Vec3d up) {
-    Vec3d zAxis = normalize(subtractVec3d(eye, target));
-    Vec3d xAxis = normalize(crossProduct(up, zAxis));
-    Vec3d yAxis = crossProduct(zAxis, xAxis);
+void lookAt(Mat4x4* view, Vertex eye, Vertex target, Vertex up) {
+    Vertex zAxis = normalize(subtractVec3d(eye, target));
+    Vertex xAxis = normalize(crossProduct(up, zAxis));
+    Vertex yAxis = crossProduct(zAxis, xAxis);
 
     view->m[0][0] = xAxis.x; view->m[0][1] = yAxis.x; view->m[0][2] = zAxis.x; view->m[0][3] = 0.0f;
     view->m[1][0] = xAxis.y; view->m[1][1] = yAxis.y; view->m[1][2] = zAxis.y; view->m[1][3] = 0.0f;
@@ -423,46 +435,6 @@ void lookAt(Mat4x4* view, Vec3d eye, Vec3d target, Vec3d up) {
     view->m[3][1] = -dotProduct(yAxis, eye); 
     view->m[3][2] = -dotProduct(zAxis, eye); 
     view->m[3][3] = 1.0f;
-}
-
-CubeMesh createCubeMesh() {
-    CubeMesh cube = {
-        .tris = {
-            // Front face
-            {-0.5, -0.5, 0.5, 1, 0, 0,      0.5, -0.5, 0.5, 1, 0, 0,    0.5, 0.5, 0.5, 1, 0, 0},
-            {-0.5, -0.5, 0.5, 1, 0, 0,      0.5, 0.5, 0.5, 1, 0, 0,     -0.5, 0.5, 0.5, 1, 0, 0},
-            // Back face
-            {-0.5, -0.5, -0.5, 0, 1, 0,     0.5, -0.5, -0.5, 0, 1, 0,   0.5, 0.5, -0.5, 0, 1, 0},
-            {-0.5, -0.5, -0.5, 0, 1, 0,     0.5, 0.5, -0.5, 0, 1, 0,    -0.5, 0.5, -0.5, 0, 1, 0},
-            // Left face
-            {-0.5, -0.5, -0.5, 0, 0, 1,     -0.5, 0.5, -0.5, 0, 0, 1,   -0.5, 0.5, 0.5, 0, 0, 1},
-            {-0.5, -0.5, -0.5, 0, 0, 1,     -0.5, 0.5, 0.5, 0, 0, 1,    -0.5, -0.5, 0.5, 0, 0, 1},
-            // Right face
-            {0.5, -0.5, -0.5, 1, 1, 0,      0.5, 0.5, -0.5, 1, 1, 0,    0.5, 0.5, 0.5, 1, 1, 0},
-            {0.5, -0.5, -0.5, 1, 1, 0,      0.5, 0.5, 0.5, 1, 1, 0,     0.5, -0.5, 0.5, 1, 1, 0},
-            // Top face
-            {-0.5, 0.5, -0.5, 0, 1, 1,      0.5, 0.5, -0.5, 0, 1, 1,    0.5, 0.5, 0.5, 0, 1, 1},
-            {-0.5, 0.5, -0.5, 0, 1, 1,      0.5, 0.5, 0.5, 0, 1, 1,     -0.5, 0.5, 0.5, 0, 1, 1},
-            // Bottom face
-            {-0.5, -0.5, -0.5, 1, 0, 1,     0.5, -0.5, -0.5, 1, 0, 1,   0.5, -0.5, 0.5, 1, 0, 1},
-            {-0.5, -0.5, -0.5, 1, 0, 1,     0.5, -0.5, 0.5, 1, 0, 1,    -0.5, -0.5, 0.5, 1, 0, 1}
-        }
-    };
-    return cube;
-}
-
-void renderCube(unsigned int shaderProgram, unsigned int VAO, CubeMesh* cube) {
-    glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Enable depth buffer
-
-    glUseProgram(shaderProgram);
-    glBindVertexArray(VAO);
-
-    for (int i = 0; i < 12; i++) {
-        glDrawArrays(GL_TRIANGLES, i * 3, 3);
-    }
-
-    glBindVertexArray(0);
 }
 
 void loadShaders(unsigned int *shaderProgram) {
@@ -510,7 +482,7 @@ void loadShaders(unsigned int *shaderProgram) {
     glDeleteShader(fragmentShader);
 }
 
-void setupMatrices(Mat4x4 *model, Mat4x4 *view, Mat4x4 *projection, unsigned int shaderProgram, Vec3d eye, Vec3d target, Vec3d up) {
+void setupMatrices(Mat4x4 *model, Mat4x4 *view, Mat4x4 *projection, unsigned int shaderProgram, Vertex eye, Vertex target, Vertex up) {
     // Setup matrices (e.g., create rotation, translation, and projection)
     createPerspectiveProjection(projection, M_PI / 4.0f, aspectRatio, 0.1f, 1000.0f);
 
