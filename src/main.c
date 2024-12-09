@@ -42,7 +42,7 @@ typedef struct mat4x4 {
     float m[4][4];
 } Mat4x4;
 
-void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, CubeMesh *tc, TetrahedronMesh *tetra);
+void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronMesh *tetra);
 void getWindowEvents(EventH *eh, WindowModel *wm);
 void toggleFullscreen(EventH *eh, WindowModel *wm);
 int initializeWindow(WindowModel *wm);
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     if(!initializeWindow(&wm)) return -1;
 
     CubeMesh cube2 = createCubeMesh(0.0f, 0.0f, 0.0f, 1.2f);
-    TetrahedronMesh tetra1 = createTetrahedronMesh(0.0f, 0.0f, 0.0f);
+    TetrahedronMesh tetra1 = createTetrahedronMesh(2.0f, 0.0f, 0.0f);
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
@@ -113,12 +113,10 @@ int main(int argc, char *argv[]) {
         }
 
         // Set up light properties
-        glUniform3f(glGetUniformLocation(shaderProgram, "lightPos"), 8.2f, 8.0f, 16.0f);
+        glUniform3f(glGetUniformLocation(shaderProgram, "lightPos"), 1.8f, 6.0f, 8.0f);
         glUniform3f(glGetUniformLocation(shaderProgram, "viewPos"), eye.x, eye.y, eye.z);
         glUniform3f(glGetUniformLocation(shaderProgram, "lightColor"), 1.0f, 1.0f, 1.0f);
         glUniform3f(glGetUniformLocation(shaderProgram, "objectColor"), 0.5f, 0.5f, 0.5f);
-
-        targetCube = createCubeMesh(target.x, target.y, target.z, 0.05f);
 
         setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
         createRotationMatrix(&model, angleX, angleY, angleZ);
@@ -129,7 +127,7 @@ int main(int argc, char *argv[]) {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view.m[0][0]);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection.m[0][0]);
 
-        render(shaderProgram, &eh, &cube2, &targetCube, &tetra1);
+        render(shaderProgram, &eh, &cube2, &tetra1);
 
         SDL_GL_SwapWindow(wm.win);
     }
@@ -150,18 +148,17 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, CubeMesh *tc, TetrahedronMesh *tetra) {
+void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronMesh *tetra) {
     glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
     if(eh->r) {
         renderCube(cube, GL_TRIANGLES);
-        // renderTetrahedron(tetra, GL_TRIANGLES);
+        renderTetrahedron(tetra, GL_TRIANGLES);
     } 
     else {
         renderCube(cube, GL_LINE_LOOP);
-        // renderTetrahedron(tetra, GL_LINE_LOOP);
-        // renderCube(tc, GL_LINE_LOOP);
+        renderTetrahedron(tetra, GL_LINE_LOOP);
     } 
     glBindVertexArray(0);
 }

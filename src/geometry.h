@@ -26,7 +26,7 @@ typedef struct cubeMesh {
 } CubeMesh;
 
 typedef struct tetrahedronMesh {
-    Vertex vertices[4];
+    Vertex vertices[12];
     unsigned int indices[12];
     unsigned int VAO, VBO, EBO;
 } TetrahedronMesh;
@@ -128,15 +128,31 @@ void renderCube(CubeMesh* cube, int mode) {
 TetrahedronMesh createTetrahedronMesh(float x, float y, float z) {
     TetrahedronMesh tetra = {
         .vertices = {
-                // Pos                          // Color
-            {   x+ -0.5f,  y+ -0.5f, z+ -0.5f,      0.0f, 1.0f, 1.0f    },  
-            {   x+  0.5f,  y+ -0.5f, z+ -0.5f,      0.0f, 1.0f, 0.0f    },  
-            {   x+  0.0f,  y+ -0.5f, z+  0.5f,      0.0f, 0.0f, 1.0f    },  
-            {   x+  0.0f,  y+  0.5f, z+  0.0f,      1.0f, 0.0f, 0.0f    }
+            // Face 1: 0, 1, 2
+            { x - 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, -0.408f, -0.816f },
+            { x + 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, -0.408f, -0.816f },
+            { x + 0.0f, y - 0.5f, z + 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, -0.408f, -0.816f },
+
+            // Face 2: 0, 1, 3
+            { x - 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, 0.0f, -0.707f, 0.707f },
+            { x + 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, 0.0f, -0.707f, 0.707f },
+            { x + 0.0f, y + 0.5f, z + 0.0f, 0.5f, 0.5f, 0.5f, 0.0f, -0.707f, 0.707f },
+
+            // Face 3: 1, 2, 3
+            { x + 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, 0.816f, -0.408f, 0.408f },
+            { x + 0.0f, y - 0.5f, z + 0.5f, 0.5f, 0.5f, 0.5f, 0.816f, -0.408f, 0.408f },
+            { x + 0.0f, y + 0.5f, z + 0.0f, 0.5f, 0.5f, 0.5f, 0.816f, -0.408f, 0.408f },
+
+            // Face 4: 0, 2, 3
+            { x - 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, 0.816f, 0.408f },
+            { x + 0.0f, y - 0.5f, z + 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, 0.816f, 0.408f },
+            { x + 0.0f, y + 0.5f, z + 0.0f, 0.5f, 0.5f, 0.5f, -0.408f, 0.816f, 0.408f },
         },
         .indices = {
-            0, 1, 2, 0, 1, 3,
-            1, 2, 3, 0, 3, 2
+            0, 1, 2, // Face 1
+            3, 4, 5, // Face 2
+            6, 7, 8, // Face 3
+            9, 10, 11 // Face 4
         }
     };
 
@@ -151,11 +167,14 @@ TetrahedronMesh createTetrahedronMesh(float x, float y, float z) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tetra.EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(tetra.indices), tetra.indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
