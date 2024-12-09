@@ -6,14 +6,12 @@
 typedef struct vertex {
     float x, y, z;
     float r, g, b;
-    // float pos[3];
-    // float color[3];
-    // float normal[3];
+    float nx, ny, nz;
 } Vertex;
 
 typedef struct mesh {
     Vertex *vertices;
-    //float *normals;
+    float *normals;
     unsigned int *indices;
     int vertexCount;
     int indexCount;
@@ -33,15 +31,6 @@ typedef struct tetrahedronMesh {
     unsigned int VAO, VBO, EBO;
 } TetrahedronMesh;
 
-/*
-typedef struct pyramidMesh {
-    // Vertex pos;
-    Vertex vertices[8];
-    unsigned int indices[36];
-    unsigned int VAO, VBO, EBO;
-} PyramidMesh;
-*/
-
 CubeMesh createCubeMesh(float x, float y, float z, float size);
 TetrahedronMesh createTetrahedronMesh(float x, float y, float z);
 
@@ -51,19 +40,19 @@ void renderTetrahedron(TetrahedronMesh* tetra, int mode);
 CubeMesh createCubeMesh(float x, float y, float z, float size) {
     CubeMesh cube = {
         .vertices = {
-                // Pos                          // Color
-            {   x+-0.5f*size, y+-0.5f*size, z+-0.5f*size,      1.0f, 0.0f, 0.0f    },
-            {   x+0.5f*size,  y+-0.5f*size, z+-0.5f*size,      0.0f, 1.0f, 0.0f    },  
-            {   x+0.5f*size,  y+0.5f*size,  z+-0.5f*size,      0.0f, 0.0f, 1.0f    },  
-            {   x+-0.5f*size, y+0.5f*size,  z+-0.5f*size,      1.0f, 1.0f, 0.0f    },
-            {   x+-0.5f*size, y+-0.5f*size, z+0.5f*size,       1.0f, 0.0f, 1.0f    }, 
-            {   x+0.5f*size,  y+-0.5f*size, z+0.5f*size,       0.0f, 1.0f, 1.0f    },  
-            {   x+0.5f*size,  y+0.5f*size,  z+0.5f*size,       1.0f, 1.0f, 1.0f    },  
-            {   x+-0.5f*size, y+0.5f*size,  z+0.5f*size,       0.0f, 0.0f, 0.0f    }  
+                // Pos                                         // Color             // Normals
+            {   x+-0.5f*size, y+-0.5f*size, z+-0.5f*size,      1.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f    },
+            {   x+0.5f*size,  y+-0.5f*size, z+-0.5f*size,      0.0f, 1.0f, 0.0f,   0.0f, 0.0f, 0.0f    },  
+            {   x+0.5f*size,  y+0.5f*size,  z+-0.5f*size,      0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f    },  
+            {   x+-0.5f*size, y+0.5f*size,  z+-0.5f*size,      1.0f, 1.0f, 0.0f,   0.0f, 0.0f, 0.0f    },
+            {   x+-0.5f*size, y+-0.5f*size, z+0.5f*size,       1.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f    }, 
+            {   x+0.5f*size,  y+-0.5f*size, z+0.5f*size,       0.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f    },  
+            {   x+0.5f*size,  y+0.5f*size,  z+0.5f*size,       1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f    },  
+            {   x+-0.5f*size, y+0.5f*size,  z+0.5f*size,       1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f    }  
         },
         .indices = {
             0, 1, 2, 2, 3, 0, // Back face
-            4, 5, 6, 6, 7, 4, // Front face
+            4, 6, 5, 6, 4, 7, // Front face
             4, 0, 3, 3, 7, 4, // Left face
             1, 5, 6, 6, 2, 1, // Right face
             3, 2, 6, 6, 7, 3, // Top face
@@ -82,11 +71,15 @@ CubeMesh createCubeMesh(float x, float y, float z, float size) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube.EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cube.indices), cube.indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    // Normal attribute
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 

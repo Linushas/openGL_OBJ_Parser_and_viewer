@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     WindowModel wm;
     if(!initializeWindow(&wm)) return -1;
 
-    CubeMesh cube2 = createCubeMesh(1.8f, 0.0f, 0.0f, 1.5f);
+    CubeMesh cube2 = createCubeMesh(0.0f, 0.0f, 0.0f, 1.2f);
     TetrahedronMesh tetra1 = createTetrahedronMesh(0.0f, 0.0f, 0.0f);
 
     unsigned int shaderProgram;
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
                 }
                 else {
                     // Orbit
-                    angleX += eh.mouseMotionY * sensitivity;
+                    angleX += -eh.mouseMotionY * sensitivity;
                     angleY += -eh.mouseMotionX * sensitivity;
                 }
             }
@@ -111,6 +111,18 @@ int main(int argc, char *argv[]) {
         else if (eh.zoom == 2) {
             eye.z += 0.2f; // Zoom out
         }
+
+            // Get the time since the program started
+            float timeValue = (float)SDL_GetTicks() / 1000.0f; // SDL_GetTicks() gives time in milliseconds
+            // Send the time value to the shader
+            unsigned int timeLoc = glGetUniformLocation(shaderProgram, "uTime");
+            glUniform1f(timeLoc, timeValue);
+
+            // Set up light properties
+            glUniform3f(glGetUniformLocation(shaderProgram, "lightPos"), 8.2f, 8.0f, 16.0f);
+            glUniform3f(glGetUniformLocation(shaderProgram, "viewPos"), eye.x, eye.y, eye.z);
+            glUniform3f(glGetUniformLocation(shaderProgram, "lightColor"), 1.0f, 1.0f, 1.0f);
+            glUniform3f(glGetUniformLocation(shaderProgram, "objectColor"), 0.5f, 0.5f, 0.5f);
 
         targetCube = createCubeMesh(target.x, target.y, target.z, 0.05f);
 
@@ -150,12 +162,12 @@ void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, CubeMesh *tc
     glUseProgram(shaderProgram);
     if(eh->r) {
         renderCube(cube, GL_TRIANGLES);
-        renderTetrahedron(tetra, GL_TRIANGLES);
+        // renderTetrahedron(tetra, GL_TRIANGLES);
     } 
     else {
         renderCube(cube, GL_LINE_LOOP);
-        renderTetrahedron(tetra, GL_LINE_LOOP);
-        renderCube(tc, GL_LINE_LOOP);
+        // renderTetrahedron(tetra, GL_LINE_LOOP);
+        // renderCube(tc, GL_LINE_LOOP);
     } 
     glBindVertexArray(0);
 }
