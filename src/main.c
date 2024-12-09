@@ -42,7 +42,7 @@ typedef struct mat4x4 {
     float m[4][4];
 } Mat4x4;
 
-void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronMesh *tetra);
+void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, CubeMesh *tc, TetrahedronMesh *tetra);
 void getWindowEvents(EventH *eh, WindowModel *wm);
 void toggleFullscreen(EventH *eh, WindowModel *wm);
 int initializeWindow(WindowModel *wm);
@@ -81,6 +81,7 @@ int main(int argc, char *argv[]) {
     float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
 
     EventH eh = {.running = 1, .fullScreen = 0, .r = 0};
+    CubeMesh targetCube;
 
 //-------------------------------------------------------------- MAIN LOOP 
     while(eh.running) {
@@ -91,15 +92,15 @@ int main(int argc, char *argv[]) {
                 if(eh.shift) {
                     // Pan
                     eye.x += -eh.mouseMotionX * sensitivity;
-                    eye.y += -eh.mouseMotionY * sensitivity/2;
+                    eye.y += eh.mouseMotionY * sensitivity/2*1.3f;
                     
                     target.x += -eh.mouseMotionX * sensitivity;
-                    target.y += -eh.mouseMotionY * sensitivity;
+                    target.y += eh.mouseMotionY * sensitivity*1.3f;
                 }
                 else {
                     // Orbit
                     angleX += eh.mouseMotionY * sensitivity;
-                    angleY += eh.mouseMotionX * sensitivity;
+                    angleY += -eh.mouseMotionX * sensitivity;
                 }
             }
         }
@@ -111,6 +112,8 @@ int main(int argc, char *argv[]) {
             eye.z += 0.2f; // Zoom out
         }
 
+        targetCube = createCubeMesh(target.x, target.y, target.z, 0.05f);
+
         setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
         createRotationMatrix(&model, angleX, angleY, angleZ);
         unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -120,7 +123,7 @@ int main(int argc, char *argv[]) {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view.m[0][0]);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection.m[0][0]);
 
-        render(shaderProgram, &eh, &cube2, &tetra1);
+        render(shaderProgram, &eh, &cube2, &targetCube, &tetra1);
 
         SDL_GL_SwapWindow(wm.win);
     }
@@ -129,6 +132,8 @@ int main(int argc, char *argv[]) {
     glDeleteBuffers(1, &cube2.VBO);
     glDeleteVertexArrays(1, &tetra1.VAO);
     glDeleteBuffers(1, &tetra1.VBO);
+    glDeleteVertexArrays(1, &targetCube.VAO);
+    glDeleteBuffers(1, &targetCube.VBO);
 
     glDeleteProgram(shaderProgram);
     
@@ -139,7 +144,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronMesh *tetra) {
+void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, CubeMesh *tc, TetrahedronMesh *tetra) {
     glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
@@ -150,6 +155,7 @@ void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronM
     else {
         renderCube(cube, GL_LINE_LOOP);
         renderTetrahedron(tetra, GL_LINE_LOOP);
+        renderCube(tc, GL_LINE_LOOP);
     } 
     glBindVertexArray(0);
 }
