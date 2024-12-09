@@ -20,7 +20,7 @@ typedef struct mesh {
 } Mesh;
 
 typedef struct cubeMesh {
-    Vertex vertices[8];
+    Vertex vertices[24];
     unsigned int indices[36];
     unsigned int VAO, VBO, EBO;
 } CubeMesh;
@@ -40,23 +40,55 @@ void renderTetrahedron(TetrahedronMesh* tetra, int mode);
 CubeMesh createCubeMesh(float x, float y, float z, float size) {
     CubeMesh cube = {
         .vertices = {
-                // Pos                                         // Color             // Normals
-            {   x+-0.5f*size, y+-0.5f*size, z+-0.5f*size,      1.0f, 0.0f, 0.0f,   0.0f, 0.0f, 0.0f    },
-            {   x+0.5f*size,  y+-0.5f*size, z+-0.5f*size,      0.0f, 1.0f, 0.0f,   0.0f, 0.0f, 0.0f    },  
-            {   x+0.5f*size,  y+0.5f*size,  z+-0.5f*size,      0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f    },  
-            {   x+-0.5f*size, y+0.5f*size,  z+-0.5f*size,      1.0f, 1.0f, 0.0f,   0.0f, 0.0f, 0.0f    },
-            {   x+-0.5f*size, y+-0.5f*size, z+0.5f*size,       1.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f    }, 
-            {   x+0.5f*size,  y+-0.5f*size, z+0.5f*size,       0.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f    },  
-            {   x+0.5f*size,  y+0.5f*size,  z+0.5f*size,       1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f    },  
-            {   x+-0.5f*size, y+0.5f*size,  z+0.5f*size,       1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f    }  
+            // Front face
+            { x + 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, 1.0f },
+            { x - 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, 1.0f },
+            { x - 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, 1.0f },
+            { x + 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, 1.0f },
+
+            // Back face
+            { x + 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, -1.0f },
+            { x - 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, -1.0f },
+            { x - 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, -1.0f },
+            { x + 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, -1.0f },
+
+            // Left face
+            { x - 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   -1.0f, 0.0f, 0.0f },
+            { x - 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   -1.0f, 0.0f, 0.0f },
+            { x - 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   -1.0f, 0.0f, 0.0f },
+            { x - 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   -1.0f, 0.0f, 0.0f },
+
+            // Right face
+            { x + 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   1.0f, 0.0f, 0.0f },
+            { x + 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   1.0f, 0.0f, 0.0f },
+            { x + 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   1.0f, 0.0f, 0.0f },
+            { x + 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   1.0f, 0.0f, 0.0f },
+
+            // Top face
+            { x + 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 1.0f, 0.0f },
+            { x - 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 1.0f, 0.0f },
+            { x - 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 1.0f, 0.0f },
+            { x + 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 1.0f, 0.0f },
+
+            // Bottom face
+            { x + 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, -1.0f, 0.0f },
+            { x - 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, -1.0f, 0.0f },
+            { x - 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, -1.0f, 0.0f },
+            { x + 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, -1.0f, 0.0f },
         },
         .indices = {
-            0, 1, 2, 2, 3, 0, // Back face
-            4, 6, 5, 6, 4, 7, // Front face
-            4, 0, 3, 3, 7, 4, // Left face
-            1, 5, 6, 6, 2, 1, // Right face
-            3, 2, 6, 6, 7, 3, // Top face
-            4, 5, 1, 1, 0, 4  // Bottom face
+            // Front face
+            0, 1, 2, 2, 3, 0,
+            // Back face
+            4, 5, 6, 6, 7, 4,
+            // Left face
+            8, 9, 10, 10, 11, 8,
+            // Right face
+            12, 13, 14, 14, 15, 12,
+            // Top face
+            16, 17, 18, 18, 19, 16,
+            // Bottom face
+            20, 21, 22, 22, 23, 20,
         }
     };
 
