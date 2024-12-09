@@ -8,9 +8,9 @@ layout (location = 0) in vec3 aPos; // Vertex Position
 layout (location = 1) in vec3 aColor; // Vertex Color
 layout (location = 2) in vec3 aNormal; // Vertex Normal
 
-flat out vec3 Normal;
+out vec3 Normal;
 out vec3 FragPos;
-flat out vec3 ourColor;
+out vec3 ourColor;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -27,9 +27,9 @@ void main() {
 const char* fragmentShaderSource = R"(
 #version 330 core
 
-flat in vec3 Normal;
+in vec3 Normal;
 in vec3 FragPos;
-flat in vec3 ourColor;
+in vec3 ourColor;
 
 out vec4 FragColor;
 

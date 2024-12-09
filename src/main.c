@@ -112,17 +112,11 @@ int main(int argc, char *argv[]) {
             eye.z += 0.2f; // Zoom out
         }
 
-            // Get the time since the program started
-            float timeValue = (float)SDL_GetTicks() / 1000.0f; // SDL_GetTicks() gives time in milliseconds
-            // Send the time value to the shader
-            unsigned int timeLoc = glGetUniformLocation(shaderProgram, "uTime");
-            glUniform1f(timeLoc, timeValue);
-
-            // Set up light properties
-            glUniform3f(glGetUniformLocation(shaderProgram, "lightPos"), 8.2f, 8.0f, 16.0f);
-            glUniform3f(glGetUniformLocation(shaderProgram, "viewPos"), eye.x, eye.y, eye.z);
-            glUniform3f(glGetUniformLocation(shaderProgram, "lightColor"), 1.0f, 1.0f, 1.0f);
-            glUniform3f(glGetUniformLocation(shaderProgram, "objectColor"), 0.5f, 0.5f, 0.5f);
+        // Set up light properties
+        glUniform3f(glGetUniformLocation(shaderProgram, "lightPos"), 8.2f, 8.0f, 16.0f);
+        glUniform3f(glGetUniformLocation(shaderProgram, "viewPos"), eye.x, eye.y, eye.z);
+        glUniform3f(glGetUniformLocation(shaderProgram, "lightColor"), 1.0f, 1.0f, 1.0f);
+        glUniform3f(glGetUniformLocation(shaderProgram, "objectColor"), 0.5f, 0.5f, 0.5f);
 
         targetCube = createCubeMesh(target.x, target.y, target.z, 0.05f);
 
@@ -157,7 +151,7 @@ int main(int argc, char *argv[]) {
 }
 
 void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, CubeMesh *tc, TetrahedronMesh *tetra) {
-    glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
+    glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
     if(eh->r) {
