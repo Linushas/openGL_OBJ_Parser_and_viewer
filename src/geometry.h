@@ -32,7 +32,7 @@ typedef struct tetrahedronMesh {
 } TetrahedronMesh;
 
 CubeMesh createCubeMesh(float x, float y, float z, float size);
-TetrahedronMesh createTetrahedronMesh(float x, float y, float z);
+TetrahedronMesh createTetrahedronMesh(Vertex v, float size);
 
 void renderCube(CubeMesh* cube, int mode);
 void renderTetrahedron(TetrahedronMesh* tetra, int mode);
@@ -125,28 +125,28 @@ void renderCube(CubeMesh* cube, int mode) {
     glBindVertexArray(0);
 }
 
-TetrahedronMesh createTetrahedronMesh(float x, float y, float z) {
+TetrahedronMesh createTetrahedronMesh(Vertex v, float size) {
     TetrahedronMesh tetra = {
         .vertices = {
             // Face 1: 0, 1, 2
-            { x - 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, -0.408f, -0.816f },
-            { x + 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, -0.408f, -0.816f },
-            { x + 0.0f, y - 0.5f, z + 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, -0.408f, -0.816f },
+            { v.x - 0.5f*size, v.y - 0.5f*size, v.z - 0.5f*size,     v.r, v.g, v.b,   -0.408f, -0.408f, -0.816f    },
+            { v.x + 0.5f*size, v.y - 0.5f*size, v.z - 0.5f*size,     v.r, v.g, v.b,   -0.408f, -0.408f, -0.816f    },
+            { v.x + 0.0f*size, v.y - 0.5f*size, v.z + 0.5f*size,     v.r, v.g, v.b,   -0.408f, -0.408f, -0.816f    },
 
             // Face 2: 0, 1, 3
-            { x - 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, 0.0f, -0.707f, 0.707f },
-            { x + 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, 0.0f, -0.707f, 0.707f },
-            { x + 0.0f, y + 0.5f, z + 0.0f, 0.5f, 0.5f, 0.5f, 0.0f, -0.707f, 0.707f },
+            { v.x - 0.5f*size, v.y - 0.5f*size, v.z - 0.5f*size,     v.r, v.g, v.b,   0.0f, -0.707f, 0.707f        },
+            { v.x + 0.5f*size, v.y - 0.5f*size, v.z - 0.5f*size,     v.r, v.g, v.b,   0.0f, -0.707f, 0.707f        },
+            { v.x + 0.0f*size, v.y + 0.5f*size, v.z + 0.0f*size,     v.r, v.g, v.b,   0.0f, -0.707f, 0.707f        },
 
             // Face 3: 1, 2, 3
-            { x + 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, 0.816f, -0.408f, 0.408f },
-            { x + 0.0f, y - 0.5f, z + 0.5f, 0.5f, 0.5f, 0.5f, 0.816f, -0.408f, 0.408f },
-            { x + 0.0f, y + 0.5f, z + 0.0f, 0.5f, 0.5f, 0.5f, 0.816f, -0.408f, 0.408f },
+            { v.x + 0.5f*size, v.y - 0.5f*size, v.z - 0.5f*size,     v.r, v.g, v.b,   0.816f, -0.408f, 0.408f      },
+            { v.x + 0.0f*size, v.y - 0.5f*size, v.z + 0.5f*size,     v.r, v.g, v.b,   0.816f, -0.408f, 0.408f      },
+            { v.x + 0.0f*size, v.y + 0.5f*size, v.z + 0.0f*size,     v.r, v.g, v.b,   0.816f, -0.408f, 0.408f      },
 
             // Face 4: 0, 2, 3
-            { x - 0.5f, y - 0.5f, z - 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, 0.816f, 0.408f },
-            { x + 0.0f, y - 0.5f, z + 0.5f, 0.5f, 0.5f, 0.5f, -0.408f, 0.816f, 0.408f },
-            { x + 0.0f, y + 0.5f, z + 0.0f, 0.5f, 0.5f, 0.5f, -0.408f, 0.816f, 0.408f },
+            { v.x - 0.5f*size, v.y - 0.5f*size, v.z - 0.5f*size,     v.r, v.g, v.b,   -0.408f, 0.816f, 0.408f      },
+            { v.x + 0.0f*size, v.y - 0.5f*size, v.z + 0.5f*size,     v.r, v.g, v.b,   -0.408f, 0.816f, 0.408f      },
+            { v.x + 0.0f*size, v.y + 0.5f*size, v.z + 0.0f*size,     v.r, v.g, v.b,   -0.408f, 0.816f, 0.408f      },
         },
         .indices = {
             0, 1, 2, // Face 1

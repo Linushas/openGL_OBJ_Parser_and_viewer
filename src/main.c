@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     if(!initializeWindow(&wm)) return -1;
 
     CubeMesh cube2 = createCubeMesh(0.0f, 0.0f, 0.0f, 1.2f);
-    TetrahedronMesh tetra1 = createTetrahedronMesh(2.0f, 0.0f, 0.0f);
+    TetrahedronMesh tetra1 = createTetrahedronMesh((Vertex){1.0f, 0.0f, 0.0f, 0.5f, 0.5f, 0.5f}, 4.0f);
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
@@ -81,7 +81,6 @@ int main(int argc, char *argv[]) {
     float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
 
     EventH eh = {.running = 1, .fullScreen = 0, .r = 0};
-    CubeMesh targetCube;
 
 //-------------------------------------------------------------- MAIN LOOP 
     while(eh.running) {
@@ -120,6 +119,7 @@ int main(int argc, char *argv[]) {
 
         setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
         createRotationMatrix(&model, angleX, angleY, angleZ);
+
         unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
         unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
         unsigned int projLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -136,8 +136,6 @@ int main(int argc, char *argv[]) {
     glDeleteBuffers(1, &cube2.VBO);
     glDeleteVertexArrays(1, &tetra1.VAO);
     glDeleteBuffers(1, &tetra1.VBO);
-    glDeleteVertexArrays(1, &targetCube.VAO);
-    glDeleteBuffers(1, &targetCube.VBO);
 
     glDeleteProgram(shaderProgram);
     
