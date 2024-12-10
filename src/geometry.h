@@ -11,10 +11,10 @@ typedef struct vertex {
 
 typedef struct mesh {
     Vertex *vertices;
-    float *normals;
+    //float *normals;
     unsigned int *indices;
     int vertexCount;
-    int indexCount;
+    int indecesCount;
 
     unsigned int VAO, VBO, EBO;
 } Mesh;
