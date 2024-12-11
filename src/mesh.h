@@ -19,6 +19,7 @@ typedef struct mesh {
 } Mesh;
 
 Mesh parseOBJ(char* file, float *pos, char *color, float scale);
+void setColor(Mesh *mesh, char *color);
 void renderMesh(Mesh mesh, int mode);
 void destroyMesh(Mesh *mesh);
 

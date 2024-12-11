@@ -4,8 +4,6 @@
 #include <GL/glew.h>
 #include "mesh.h"
 
-void setColor(Mesh *mesh, char *color);
-
 Mesh parseOBJ(char* file, float *pos, char *color, float scale) {
     Mesh newMesh;
     newMesh.vertices = NULL;
