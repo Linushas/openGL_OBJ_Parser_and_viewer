@@ -25,7 +25,7 @@ typedef struct eventHandler {
     SDL_Event event;
     int running;
     int fullScreen;
-    int r;
+    int r, n;
     int zoom;
     float mouseMotionX, mouseMotionY;
     int mouseDown;
@@ -67,7 +67,12 @@ int main(int argc, char *argv[]) {
 
     Mesh meshes[10];
     meshes[0] = parseOBJ("models/ixo.obj");
-    int meshCount = 1;
+    printf("loaded ixo.obj\n");
+    meshes[1] = parseOBJ("models/monkey.obj");
+    printf("loaded monkey.obj\n");
+    meshes[2] = parseOBJ("models/torus.obj");
+    printf("loaded torus.obj\n");
+    int meshCount = 3;
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
@@ -81,7 +86,7 @@ int main(int argc, char *argv[]) {
 
     float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
 
-    EventH eh = {.running = 1, .fullScreen = 0, .r = 0};
+    EventH eh = {.running = 1, .fullScreen = 0, .r = 0, .n = 0};
 
 //-------------------------------------------------------------- MAIN LOOP 
     while(eh.running) {
@@ -150,14 +155,14 @@ void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount) {
     glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
-    for(int i = 0; i < meshCount; i++) {
+    //for(int i = 0; i < meshCount; i++) {
         if(eh->r) {
-            renderMesh(mesh[i], GL_TRIANGLES);
+            renderMesh(mesh[eh->n], GL_TRIANGLES);
         } 
         else {
-            renderMesh(mesh[i], GL_LINE_LOOP);
+            renderMesh(mesh[eh->n], GL_LINE_LOOP);
         } 
-    }
+    //}
     glBindVertexArray(0);
 }
 
@@ -178,6 +183,9 @@ void getWindowEvents(EventH *eh, WindowModel *wm) {
                 }
                 if(eh->event.key.keysym.sym == SDLK_r) {
                     eh->r = !eh->r;
+                }
+                if(eh->event.key.keysym.sym == SDLK_n) {
+                    eh->n = (eh->n + 1) % 3;
                 }
                 if(eh->event.key.keysym.sym == SDLK_LSHIFT) {
                     eh->shift = 1;
