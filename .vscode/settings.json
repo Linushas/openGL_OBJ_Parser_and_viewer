@@ -24,7 +24,9 @@
     "iostream": "cpp",
     "ostream": "cpp",
     "sdl_ttf.h": "c",
-    "glew.h": "c"
+    "glew.h": "c",
+    "math.h": "c",
+    "math3d.h": "c"
   },
   "makefile.launchConfigurations": [
     {

@@ -1,5 +1,5 @@
-#ifndef PROJECTION_H
-#define PROJECTION_H
+#ifndef MATH3D_H
+#define MATH3D_H
 
 #include <SDL2/SDL.h>
 #include <GL/glew.h>

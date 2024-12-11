@@ -3,7 +3,7 @@
 #include <GL/glew.h>
 #include "shader.h"
 #include "mesh.h"
-#include "projection.h"
+#include "math3d.h"
 
 typedef struct eventHandler {
     SDL_Event event;
