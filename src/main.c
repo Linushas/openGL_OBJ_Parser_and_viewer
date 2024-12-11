@@ -31,35 +31,27 @@ int initializeWindow(WindowModel *wm);
 
 int main(int argc, char *argv[]) {
     WindowModel wm;
+    EventH eh = {.running = 1, .fullScreen = 0, .r = 0, .n = 0};
     if(!initializeWindow(&wm)) return -1;
+    wm.eh = &eh;
 
     Mesh meshes[10];
     int meshCount = 3;
-    float pos1[3] = {0.0f, 0.0f, 0.0f};
-    float pos2[3] = {2.0f, 0.0f, 0.0f};
-    float pos3[3] = {-2.0f, 0.0f, 0.0f};
-    float pos4[3] = {0.0f, -2.0f, 0.0f};
 
-    meshes[0] = parseOBJ("models/ixo.obj", pos1, "red", 0.5f);
-    printf("loaded ixo.obj\n");
-    meshes[1] = parseOBJ("models/monkey.obj", pos2, "yellow", 1.0f);
-    printf("loaded monkey.obj\n");
-    meshes[2] = parseOBJ("models/torus.obj", pos3, "cyan", 1.0f);
-    printf("loaded torus.obj\n");
+    meshes[0] = parseOBJ(OBJ_IXO_SPHERE, (float[]){0.0f, 0.0f, 0.0f}, "red", 0.5f);
+    meshes[1] = parseOBJ(OBJ_MONKEY, (float[]){2.0f, 0.0f, 0.0f}, "yellow", 1.0f);
+    meshes[2] = parseOBJ(OBJ_TORUS, (float[]){-2.0f, 0.0f, 0.0f}, "cyan", 1.0f);
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
 
     Mat4x4 model = {0}, view = {0}, projection = {0};
-    
     Vertex eye = {0.0f, 0.0f, 4.0f};
     Vertex target = {0.0f, 0.0f, 0.0f};
     Vertex up = {0.0f, 1.0f, 0.0f};
     setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
 
     float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
-
-    EventH eh = {.running = 1, .fullScreen = 0, .r = 0, .n = 0};
 
     while(eh.running) {
         getWindowEvents(&eh, &wm);

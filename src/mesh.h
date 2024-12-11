@@ -1,6 +1,11 @@
 #ifndef MESH_H
 #define MESH_H
 
+#define OBJ_IXO_SPHERE "models/ixo.obj"
+#define OBJ_MONKEY "models/monkey.obj"
+#define OBJ_TORUS "models/torus.obj"
+#define OBJ_CUBE "models/cube.obj"
+
 typedef struct vertex {
     float x, y, z;
     float r, g, b;
