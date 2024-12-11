@@ -20,6 +20,8 @@ typedef struct eventHandler {
 typedef struct windowModel {
     SDL_Window *win;
     SDL_GLContext glContext;
+    EventH *eh;
+    unsigned int shaderProgram;
 } WindowModel;
 
 void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount);
@@ -44,8 +46,6 @@ int main(int argc, char *argv[]) {
     printf("loaded monkey.obj\n");
     meshes[2] = parseOBJ("models/torus.obj", pos3, "cyan", 1.0f);
     printf("loaded torus.obj\n");
-    // meshes[3] = parseOBJ("models/glass.obj", pos4, color4, 0.2f);
-    // printf("loaded glass.obj\n");
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
@@ -61,7 +61,6 @@ int main(int argc, char *argv[]) {
 
     EventH eh = {.running = 1, .fullScreen = 0, .r = 0, .n = 0};
 
-//-------------------------------------------------------------- MAIN LOOP 
     while(eh.running) {
         getWindowEvents(&eh, &wm);
 
