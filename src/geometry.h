@@ -3,22 +3,6 @@
 
 #include <GL/glew.h>
 
-typedef struct vertex {
-    float x, y, z;
-    float r, g, b;
-    float nx, ny, nz;
-} Vertex;
-
-typedef struct mesh {
-    Vertex *vertices;
-    //float *normals;
-    unsigned int *indices;
-    int vertexCount;
-    int indecesCount;
-
-    unsigned int VAO, VBO, EBO;
-} Mesh;
-
 typedef struct cubeMesh {
     Vertex vertices[24];
     unsigned int indices[36];

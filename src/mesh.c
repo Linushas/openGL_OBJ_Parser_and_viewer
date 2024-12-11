@@ -1,29 +1,94 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <GL/glew.h>
-#include <mesh.h>
+#include "mesh.h"
 
 Mesh parseOBJ(char* file) {
     Mesh newMesh;
-    FILE* filePtr = fopen(file, "r");
-    
-    newMesh.vertexCount = 24;
+    newMesh.vertices = NULL;
+    newMesh.indices = NULL;
+    newMesh.vertexCount = 0;
+    newMesh.indiceCount = 0;
+
+    FILE* fp = fopen(file, "r");
+    if (!fp) {
+        printf("Could not open file %s\n", file);
+        return newMesh;
+    }
+
+    float vertices[3][100*100] = {0};
+    float normals[3][100*100] = {0};
+    int vertexCount = 0;
+    int normalCount = 0;
+
+    int vertexIndexArr[100*100] = {0};
+    int normalIndexArr[100*100] = {0};
+    int indiceCount = 0;
+    int facesCount = 0;
+    int skip = 0;
+
+    char line[1024];
+    while (fgets(line, sizeof(line), fp)) {
+        if (line[0] == '#' || line[0] == '\n') continue;
+        if (line[0] == 'v' && line[1] == ' ') {
+            float x, y, z;
+            if (sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
+                vertices[0][vertexCount] = x;
+                vertices[1][vertexCount] = y;
+                vertices[2][vertexCount] = z;
+                vertexCount++;
+            }
+        }
+        if (line[0] == 'v' && line[1] == 'n') {
+            float nx, ny, nz;
+            if (sscanf(line, "vn %f %f %f", &nx, &ny, &nz) == 3) {
+                normals[0][normalCount] = nx;
+                normals[1][normalCount] = ny;
+                normals[2][normalCount] = nz;
+                normalCount++;
+            }
+        }
+        if (line[0] == 'f' && line[1] == ' ') {
+            sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
+            &vertexIndexArr[indiceCount], &skip, &normalIndexArr[indiceCount],
+            &vertexIndexArr[indiceCount+1], &skip, &normalIndexArr[indiceCount+1],
+            &vertexIndexArr[indiceCount+2], &skip, &normalIndexArr[indiceCount+2]);
+            
+            indiceCount += 3;
+            facesCount++;
+        }
+    }
+    fclose(fp);
+
+    newMesh.vertexCount = newMesh.indiceCount = indiceCount;
     newMesh.vertices = malloc(newMesh.vertexCount * sizeof(Vertex));
+    newMesh.indices = malloc(newMesh.indiceCount * sizeof(unsigned int));
 
+    for(int i = 0; i < indiceCount; i++) {
+        newMesh.vertices[i].x = vertices[0][vertexIndexArr[i] -1];
+        newMesh.vertices[i].y = vertices[1][vertexIndexArr[i] -1];
+        newMesh.vertices[i].z = vertices[2][vertexIndexArr[i] -1];
+        newMesh.vertices[i].nx = normals[0][normalIndexArr[i] -1];
+        newMesh.vertices[i].ny = normals[1][normalIndexArr[i] -1];
+        newMesh.vertices[i].nz = normals[2][normalIndexArr[i] -1];
+        newMesh.vertices[i].r = 0.5f;
+        newMesh.vertices[i].g = 0.5f;
+        newMesh.vertices[i].b = 0.5f;
 
-
-    fclose(filePtr);
-
+        newMesh.indices[i] = i;
+    }
+    
     glGenVertexArrays(1, &newMesh.VAO);
     glGenBuffers(1, &newMesh.VBO);
     glGenBuffers(1, &newMesh.EBO);
 
     glBindVertexArray(newMesh.VAO);
     glBindBuffer(GL_ARRAY_BUFFER, newMesh.VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(newMesh.vertices), &newMesh.vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, newMesh.vertexCount * sizeof(Vertex), newMesh.vertices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, newMesh.EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(newMesh.indices), newMesh.indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, newMesh.indiceCount * sizeof(unsigned int), newMesh.indices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     glEnableVertexAttribArray(0);
@@ -40,8 +105,168 @@ Mesh parseOBJ(char* file) {
     return newMesh;
 }
 
-void renderMesh(Mesh *mesh, int mode) {
-    glBindVertexArray(mesh->VAO);
-    glDrawElements(mode, mesh->indecesCount, GL_UNSIGNED_INT, 0);
+// CUBE - hardcodedr
+// Mesh parseOBJ(char* file) {
+//     // Mesh newMesh;
+//     // newMesh.vertices = NULL;
+//     // newMesh.indices = NULL;
+//     // newMesh.vertexCount = 0;
+//     // newMesh.indiceCount = 0;
+
+//     FILE* fp = fopen(file, "r");
+//     if (!fp) {
+//         printf("Could not open file %s\n", file);
+//         // return newMesh;
+//     }
+
+//     float vertices[3][100] = {0};
+//     float normals[3][100] = {0};
+//     int vertexCount = 0;
+//     int normalCount = 0;
+
+//     int vertexIndexArr[100] = {0};
+//     int normalIndexArr[100] = {0};
+//     int indiceCount = 0;
+//     int facesCount = 0;
+//     int skip = 0;
+
+//     char line[1024];
+//     while (fgets(line, sizeof(line), fp)) {
+//         if (line[0] == '#' || line[0] == '\n') continue;
+//         if (line[0] == 'v' && line[1] == ' ') {
+//             float x, y, z;
+//             if (sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
+//                 vertices[0][vertexCount] = x;
+//                 vertices[1][vertexCount] = y;
+//                 vertices[2][vertexCount] = z;
+//                 vertexCount++;
+//             }
+//         }
+//         if (line[0] == 'v' && line[1] == 'n') {
+//             float nx, ny, nz;
+//             if (sscanf(line, "vn %f %f %f", &nx, &ny, &nz) == 3) {
+//                 normals[0][normalCount] = nx;
+//                 normals[1][normalCount] = ny;
+//                 normals[2][normalCount] = nz;
+//                 normalCount++;
+//             }
+//         }
+//         if (line[0] == 'f' && line[1] == ' ') {
+//             sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
+//             &vertexIndexArr[indiceCount], &skip, &normalIndexArr[indiceCount],
+//             &vertexIndexArr[indiceCount+1], &skip, &normalIndexArr[indiceCount+1],
+//             &vertexIndexArr[indiceCount+2], &skip, &normalIndexArr[indiceCount+2]);
+            
+//             indiceCount += 3;
+//             facesCount++;
+//         }
+//     }
+//     fclose(fp);
+
+
+//     Mesh newMesh;
+//     newMesh.vertices = malloc(24 * sizeof(Vertex));
+//     newMesh.indices = malloc(36 * sizeof(unsigned int));
+
+//     float x = 0.0f, y = 0.0f, z = 0.0f, size = 2.0f;
+
+//     Vertex verticess[24] = {
+//         // Front face
+//         { x + 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, 1.0f },
+//         { x - 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, 1.0f },
+//         { x - 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, 1.0f },
+//         { x + 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, 1.0f },
+
+//         // Back face
+//         { x + 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, -1.0f },
+//         { x - 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, -1.0f },
+//         { x - 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, -1.0f },
+//         { x + 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 0.0f, -1.0f },
+
+//         // Left face
+//         { x - 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   -1.0f, 0.0f, 0.0f },
+//         { x - 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   -1.0f, 0.0f, 0.0f },
+//         { x - 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   -1.0f, 0.0f, 0.0f },
+//         { x - 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   -1.0f, 0.0f, 0.0f },
+
+//         // Right face
+//         { x + 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   1.0f, 0.0f, 0.0f },
+//         { x + 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   1.0f, 0.0f, 0.0f },
+//         { x + 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   1.0f, 0.0f, 0.0f },
+//         { x + 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   1.0f, 0.0f, 0.0f },
+
+//         // Top face
+//         { x + 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 1.0f, 0.0f },
+//         { x - 0.5f * size, y + 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 1.0f, 0.0f },
+//         { x - 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 1.0f, 0.0f },
+//         { x + 0.5f * size, y + 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, 1.0f, 0.0f },
+
+//         // Bottom face
+//         { x + 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, -1.0f, 0.0f },
+//         { x - 0.5f * size, y - 0.5f * size, z + 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, -1.0f, 0.0f },
+//         { x - 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, -1.0f, 0.0f },
+//         { x + 0.5f * size, y - 0.5f * size, z - 0.5f * size,    0.5f, 0.5f, 0.5f,   0.0f, -1.0f, 0.0f },
+//     };
+//     unsigned int indicess[36] = {
+//         // Front face
+//         0, 1, 2, 2, 3, 0,
+//         // Back face
+//         4, 5, 6, 6, 7, 4,
+//         // Left face
+//         8, 9, 10, 10, 11, 8,
+//         // Right face
+//         12, 13, 14, 14, 15, 12,
+//         // Top face
+//         16, 17, 18, 18, 19, 16,
+//         // Bottom face
+//         20, 21, 22, 22, 23, 20,
+//     };
+
+//     for(int i = 0; i < 24; i++) {
+//         newMesh.vertices[i] = verticess[i];
+//     }
+//     for(int i = 0; i < 36; i++) {
+//         newMesh.indices[i] = indicess[i];
+//     }
+//     newMesh.indiceCount = 36;
+//     newMesh.vertexCount = 24;
+
+//     glGenVertexArrays(1, &newMesh.VAO);
+//     glGenBuffers(1, &newMesh.VBO);
+//     glGenBuffers(1, &newMesh.EBO);
+
+//     glBindVertexArray(newMesh.VAO);
+//     glBindBuffer(GL_ARRAY_BUFFER, newMesh.VBO);
+//     glBufferData(GL_ARRAY_BUFFER, newMesh.vertexCount * sizeof(Vertex), newMesh.vertices, GL_STATIC_DRAW);
+
+//     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, newMesh.EBO);
+//     glBufferData(GL_ELEMENT_ARRAY_BUFFER, newMesh.indiceCount * sizeof(unsigned int), newMesh.indices, GL_STATIC_DRAW);
+
+//     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+//     glEnableVertexAttribArray(0);
+
+//     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(3 * sizeof(float)));
+//     glEnableVertexAttribArray(1);
+
+//     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(6 * sizeof(float)));
+//     glEnableVertexAttribArray(2);
+
+//     glBindBuffer(GL_ARRAY_BUFFER, 0); 
+//     glBindVertexArray(0); 
+
+//     return newMesh;
+// }
+
+void renderMesh(Mesh mesh, int mode) {
+    glBindVertexArray(mesh.VAO);
+    glDrawElements(mode, mesh.indiceCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
+}
+
+void destroyMesh(Mesh *mesh) {
+    glDeleteVertexArrays(1, &mesh->VAO);
+    glDeleteBuffers(1, &mesh->VBO);
+    glDeleteBuffers(1, &mesh->EBO);
+    free(mesh->indices);
+    free(mesh->vertices);
 }

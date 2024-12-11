@@ -10,7 +10,7 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include "shader.h"
-#include "geometry.h"
+#include "mesh.h"
 
 #define res         4               // 0=160*X 1=360*X 4=640*X ...
 #define aspectRatio (16.0f / 9.0f)
@@ -42,7 +42,7 @@ typedef struct mat4x4 {
     float m[4][4];
 } Mat4x4;
 
-void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronMesh *tetra);
+void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh);
 void getWindowEvents(EventH *eh, WindowModel *wm);
 void toggleFullscreen(EventH *eh, WindowModel *wm);
 int initializeWindow(WindowModel *wm);
@@ -65,8 +65,20 @@ int main(int argc, char *argv[]) {
     WindowModel wm;
     if(!initializeWindow(&wm)) return -1;
 
-    CubeMesh cube2 = createCubeMesh(0.0f, 0.0f, 0.0f, 1.2f);
-    TetrahedronMesh tetra1 = createTetrahedronMesh((Vertex){1.0f, 0.0f, 0.0f, 0.5f, 0.5f, 0.5f}, 4.0f);
+
+    Mesh newMesh = parseOBJ("models/cube.obj");
+    printf("\nvertices:\n");
+    for(int m = 0; m < newMesh.vertexCount; m++)
+        printf("%f %f %f, %f %f %f, %f %f %f\n", newMesh.vertices[m].x, newMesh.vertices[m].y, newMesh.vertices[m].z, newMesh.vertices[m].r, newMesh.vertices[m].g, newMesh.vertices[m].b, newMesh.vertices[m].nx, newMesh.vertices[m].ny, newMesh.vertices[m].nz);
+    printf("\nindices:\n");
+    for(int m = 0; m < newMesh.indiceCount; m++){
+        if(m % 3 == 0) printf("\t");
+        if(m % 6 == 0) printf("\n");
+        printf("%d, ", newMesh.indices[m]);
+    }
+        
+
+
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
@@ -127,15 +139,16 @@ int main(int argc, char *argv[]) {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view.m[0][0]);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection.m[0][0]);
 
-        render(shaderProgram, &eh, &cube2, &tetra1);
+        render(shaderProgram, &eh, &newMesh);
 
         SDL_GL_SwapWindow(wm.win);
     }
 
-    glDeleteVertexArrays(1, &cube2.VAO);
-    glDeleteBuffers(1, &cube2.VBO);
-    glDeleteVertexArrays(1, &tetra1.VAO);
-    glDeleteBuffers(1, &tetra1.VBO);
+    // glDeleteVertexArrays(1, &cube2.VAO);
+    // glDeleteBuffers(1, &cube2.VBO);
+    // glDeleteVertexArrays(1, &tetra1.VAO);
+    // glDeleteBuffers(1, &tetra1.VBO);
+    destroyMesh(&newMesh);
 
     glDeleteProgram(shaderProgram);
     
@@ -146,17 +159,15 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void render(unsigned int shaderProgram, EventH *eh, CubeMesh *cube, TetrahedronMesh *tetra) {
+void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh) {
     glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
     if(eh->r) {
-        renderCube(cube, GL_TRIANGLES);
-        renderTetrahedron(tetra, GL_TRIANGLES);
+        renderMesh(*mesh, GL_TRIANGLES);
     } 
     else {
-        renderCube(cube, GL_LINE_LOOP);
-        renderTetrahedron(tetra, GL_LINE_LOOP);
+        renderMesh(*mesh, GL_LINE_LOOP);
     } 
     glBindVertexArray(0);
 }
@@ -191,11 +202,11 @@ void getWindowEvents(EventH *eh, WindowModel *wm) {
             
             case SDL_MOUSEBUTTONDOWN:
                 eh->mouseDown = 1;
-                if(eh->event.button.button == SDL_BUTTON_MIDDLE) eh->mouseMiddle = 1;
+                if(eh->event.button.button == SDL_BUTTON_LEFT) eh->mouseMiddle = 1;
                 break;
             case SDL_MOUSEBUTTONUP:
                 eh->mouseDown = 0;
-                if(eh->event.button.button == SDL_BUTTON_MIDDLE) eh->mouseMiddle = 0;
+                if(eh->event.button.button == SDL_BUTTON_LEFT) eh->mouseMiddle = 0;
                 break;
             
             case SDL_MOUSEWHEEL:
