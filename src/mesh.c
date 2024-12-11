@@ -4,12 +4,20 @@
 #include <GL/glew.h>
 #include "mesh.h"
 
-Mesh parseOBJ(char* file) {
+void setColor(Mesh *mesh, char *color);
+
+Mesh parseOBJ(char* file, float *pos, char *color, float scale) {
     Mesh newMesh;
     newMesh.vertices = NULL;
     newMesh.indices = NULL;
     newMesh.vertexCount = 0;
     newMesh.indiceCount = 0;
+    newMesh.scale = scale;
+    newMesh.pos[0] = pos[0];
+    newMesh.pos[1] = pos[1];
+    newMesh.pos[2] = pos[2];
+    
+    setColor(&newMesh, color);
 
     FILE* fp = fopen(file, "r");
     if (!fp) {
@@ -34,9 +42,9 @@ Mesh parseOBJ(char* file) {
         if (line[0] == 'v' && line[1] == ' ') {
             float x, y, z;
             if (sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
-                vertices[0][vertexCount] = x;
-                vertices[1][vertexCount] = y;
-                vertices[2][vertexCount] = z;
+                vertices[0][vertexCount] = (x * newMesh.scale) + newMesh.pos[0];
+                vertices[1][vertexCount] = (y * newMesh.scale) + newMesh.pos[1];
+                vertices[2][vertexCount] = (z * newMesh.scale) + newMesh.pos[2];
                 vertexCount++;
             }
         }
@@ -72,9 +80,9 @@ Mesh parseOBJ(char* file) {
         newMesh.vertices[i].nx = normals[0][normalIndexArr[i] -1];
         newMesh.vertices[i].ny = normals[1][normalIndexArr[i] -1];
         newMesh.vertices[i].nz = normals[2][normalIndexArr[i] -1];
-        newMesh.vertices[i].r = 0.5f;
-        newMesh.vertices[i].g = 0.5f;
-        newMesh.vertices[i].b = 0.5f;
+        newMesh.vertices[i].r = newMesh.color[0];
+        newMesh.vertices[i].g = newMesh.color[1];
+        newMesh.vertices[i].b = newMesh.color[2];
 
         newMesh.indices[i] = i;
     }
@@ -117,4 +125,57 @@ void destroyMesh(Mesh *mesh) {
     glDeleteBuffers(1, &mesh->EBO);
     free(mesh->indices);
     free(mesh->vertices);
+}
+
+void setColor(Mesh *mesh, char *color) {
+    if(strcmp(color, "red") == 0) {
+        mesh->color[0] = 1.0f;
+        mesh->color[1] = 0.0f;
+        mesh->color[2] = 0.0f;
+    }
+    else if(strcmp(color, "green") == 0) {
+        mesh->color[0] = 0.0f;
+        mesh->color[1] = 1.0f;
+        mesh->color[2] = 0.0f;
+    }
+    else if(strcmp(color, "blue") == 0) {
+        mesh->color[0] = 0.0f;
+        mesh->color[1] = 0.0f;
+        mesh->color[2] = 1.0f;
+    }
+    else if(strcmp(color, "yellow") == 0) {
+        mesh->color[0] = 1.0f;
+        mesh->color[1] = 1.0f;
+        mesh->color[2] = 0.0f;
+    }
+    else if(strcmp(color, "purple") == 0) {
+        mesh->color[0] = 1.0f;
+        mesh->color[1] = 0.0f;
+        mesh->color[2] = 1.0f;
+    }
+    else if(strcmp(color, "cyan") == 0) {
+        mesh->color[0] = 0.0f;
+        mesh->color[1] = 1.0f;
+        mesh->color[2] = 1.0f;
+    }
+    else if(strcmp(color, "white") == 0) {
+        mesh->color[0] = 1.0f;
+        mesh->color[1] = 1.0f;
+        mesh->color[2] = 1.0f;
+    }
+    else if(strcmp(color, "black") == 0) {
+        mesh->color[0] = 0.0f;
+        mesh->color[1] = 0.0f;
+        mesh->color[2] = 0.0f;
+    }
+    else if(strcmp(color, "grey") == 0) {
+        mesh->color[0] = 0.5f;
+        mesh->color[1] = 0.5f;
+        mesh->color[2] = 0.5f;
+    }
+    else {
+        mesh->color[0] = 0.5f;
+        mesh->color[1] = 0.5;
+        mesh->color[2] = 0.5f;
+    }
 }

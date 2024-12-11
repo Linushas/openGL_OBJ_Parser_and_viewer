@@ -13,12 +13,12 @@ typedef struct mesh {
     int vertexCount, indiceCount;
     unsigned int VAO, VBO, EBO;
 
-    // float pos[3];
-    // float color[3];
-    // float scale;
+    float pos[3];
+    float color[3];
+    float scale;
 } Mesh;
 
-Mesh parseOBJ(char* file);
+Mesh parseOBJ(char* file, float *pos, char *color, float scale);
 void renderMesh(Mesh mesh, int mode);
 void destroyMesh(Mesh *mesh);
 

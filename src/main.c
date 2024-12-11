@@ -66,12 +66,18 @@ int main(int argc, char *argv[]) {
     if(!initializeWindow(&wm)) return -1;
 
     Mesh meshes[10];
-    meshes[0] = parseOBJ("models/ixo.obj");
+    float pos1[3] = {0.0f, 0.0f, 0.0f};
+    float pos2[3] = {2.0f, 0.0f, 0.0f};
+    float pos3[3] = {-2.0f, 0.0f, 0.0f};
+    float pos4[3] = {0.0f, -2.0f, 0.0f};
+    meshes[0] = parseOBJ("models/ixo.obj", pos1, "red", 0.5f);
     printf("loaded ixo.obj\n");
-    meshes[1] = parseOBJ("models/monkey.obj");
+    meshes[1] = parseOBJ("models/monkey.obj", pos2, "yellow", 1.0f);
     printf("loaded monkey.obj\n");
-    meshes[2] = parseOBJ("models/torus.obj");
+    meshes[2] = parseOBJ("models/torus.obj", pos3, "cyan", 1.0f);
     printf("loaded torus.obj\n");
+    // meshes[3] = parseOBJ("models/glass.obj", pos4, color4, 0.2f);
+    // printf("loaded glass.obj\n");
     int meshCount = 3;
 
     unsigned int shaderProgram;
@@ -155,14 +161,14 @@ void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount) {
     glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
-    //for(int i = 0; i < meshCount; i++) {
+    for(int i = 0; i < meshCount; i++) {
         if(eh->r) {
-            renderMesh(mesh[eh->n], GL_TRIANGLES);
+            renderMesh(mesh[i], GL_TRIANGLES);
         } 
         else {
-            renderMesh(mesh[eh->n], GL_LINE_LOOP);
+            renderMesh(mesh[i], GL_LINE_LOOP);
         } 
-    //}
+    }
     glBindVertexArray(0);
 }
 
@@ -185,7 +191,7 @@ void getWindowEvents(EventH *eh, WindowModel *wm) {
                     eh->r = !eh->r;
                 }
                 if(eh->event.key.keysym.sym == SDLK_n) {
-                    eh->n = (eh->n + 1) % 3;
+                    eh->n = (eh->n + 1) % 4;
                 }
                 if(eh->event.key.keysym.sym == SDLK_LSHIFT) {
                     eh->shift = 1;
