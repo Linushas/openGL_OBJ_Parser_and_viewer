@@ -10,6 +10,7 @@ typedef struct eventHandler {
     int running;
     int fullScreen;
     int r, n;
+    int w,a,s,d;
     int zoom;
     float mouseMotionX, mouseMotionY;
     int mouseDown;
@@ -25,80 +26,51 @@ typedef struct windowModel {
 } WindowModel;
 
 void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount);
-void getWindowEvents(EventH *eh, WindowModel *wm);
-void toggleFullscreen(EventH *eh, WindowModel *wm);
+void getWindowEvents(WindowModel *wm, Vertex *eye, Vertex *target, float *angleX, float *angleY);
+void toggleFullscreen(WindowModel *wm);
 int initializeWindow(WindowModel *wm);
 
 int main(int argc, char *argv[]) {
     WindowModel wm;
-    EventH eh = {.running = 1, .fullScreen = 0, .r = 0, .n = 0};
     if(!initializeWindow(&wm)) return -1;
+    EventH eh = {.running = 1, .fullScreen = 0, .r = 0, .n = 0};
     wm.eh = &eh;
 
     Mesh meshes[10];
     int meshCount = 3;
-
     meshes[0] = parseOBJ(OBJ_IXO_SPHERE, POS(0.0f, 0.0f, 0.0f), "red", 0.5f);
     meshes[1] = parseOBJ(OBJ_MONKEY, POS(2.0f, 0.0f, 0.0f), "yellow", 1.0f);
     meshes[2] = parseOBJ(OBJ_TORUS, POS(-2.0f, 0.0f, 0.0f), "cyan", 1.0f);
 
-    unsigned int shaderProgram;
-    loadShaders(&shaderProgram);
+    loadShaders(&wm.shaderProgram);
 
     Mat4x4 model = {0}, view = {0}, projection = {0};
     Vertex eye = {0.0f, 0.0f, 4.0f};
     Vertex target = {0.0f, 0.0f, 0.0f};
     Vertex up = {0.0f, 1.0f, 0.0f};
-    setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
-
+    setupMatrices(&model, &view, &projection, wm.shaderProgram, eye, target, up);
     float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
 
-    while(eh.running) {
-        getWindowEvents(&eh, &wm);
-
-        if(eh.mouseDown) {
-            if(eh.mouseMiddle) {
-                if(eh.shift) {
-                    // Pan
-                    eye.x += -eh.mouseMotionX * sensitivity;
-                    eye.y += eh.mouseMotionY * sensitivity/2*1.3f;
-                    
-                    target.x += -eh.mouseMotionX * sensitivity;
-                    target.y += eh.mouseMotionY * sensitivity*1.3f;
-                }
-                else {
-                    // Orbit
-                    angleX += -eh.mouseMotionY * sensitivity;
-                    angleY += -eh.mouseMotionX * sensitivity;
-                }
-            }
-        }
-
-        if (eh.zoom == 1) {
-            eye.z -= 0.2f; // Zoom in
-        } 
-        else if (eh.zoom == 2) {
-            eye.z += 0.2f; // Zoom out
-        }
+    while(wm.eh->running) {
+        getWindowEvents(&wm, &eye, &target, &angleX, &angleY);
 
         // Set up light properties
-        glUniform3f(glGetUniformLocation(shaderProgram, "lightPos"), 1.8f, 6.0f, 8.0f);
-        glUniform3f(glGetUniformLocation(shaderProgram, "viewPos"), eye.x, eye.y, eye.z);
-        glUniform3f(glGetUniformLocation(shaderProgram, "lightColor"), 1.0f, 1.0f, 1.0f);
-        glUniform3f(glGetUniformLocation(shaderProgram, "objectColor"), 0.5f, 0.5f, 0.5f);
+        glUniform3f(glGetUniformLocation(wm.shaderProgram, "lightPos"), 1.8f, 6.0f, 8.0f);
+        glUniform3f(glGetUniformLocation(wm.shaderProgram, "viewPos"), eye.x, eye.y, eye.z);
+        glUniform3f(glGetUniformLocation(wm.shaderProgram, "lightColor"), 1.0f, 1.0f, 1.0f);
+        glUniform3f(glGetUniformLocation(wm.shaderProgram, "objectColor"), 0.5f, 0.5f, 0.5f);
 
-        setupMatrices(&model, &view, &projection, shaderProgram, eye, target, up);
+        setupMatrices(&model, &view, &projection, wm.shaderProgram, eye, target, up);
         createRotationMatrix(&model, angleX, angleY, angleZ);
 
-        unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
-        unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
-        unsigned int projLoc = glGetUniformLocation(shaderProgram, "projection");
+        unsigned int modelLoc = glGetUniformLocation(wm.shaderProgram, "model");
+        unsigned int viewLoc = glGetUniformLocation(wm.shaderProgram, "view");
+        unsigned int projLoc = glGetUniformLocation(wm.shaderProgram, "projection");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model.m[0][0]);
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view.m[0][0]);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection.m[0][0]);
 
-        render(shaderProgram, &eh, meshes, meshCount);
-
+        render(wm.shaderProgram, wm.eh, meshes, meshCount);
         SDL_GL_SwapWindow(wm.win);
     }
 
@@ -106,7 +78,7 @@ int main(int argc, char *argv[]) {
         destroyMesh(&meshes[i]);
     }
     
-    glDeleteProgram(shaderProgram);
+    glDeleteProgram(wm.shaderProgram);
     
     SDL_GL_DeleteContext(wm.glContext);
     SDL_DestroyWindow(wm.win);
@@ -130,67 +102,92 @@ void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount) {
     glBindVertexArray(0);
 }
 
-void getWindowEvents(EventH *eh, WindowModel *wm) {
-    eh->zoom = 0;
-    eh->mouseMotionX = 0;
-    eh->mouseMotionY = 0;
+void getWindowEvents(WindowModel *wm, Vertex *eye, Vertex *target, float *angleX, float *angleY) {
+    wm->eh->zoom = 0;
+    wm->eh->mouseMotionX = 0;
+    wm->eh->mouseMotionY = 0;
 
-    while(SDL_PollEvent(&(eh->event))) {
-        switch(eh->event.type) {
+    while(SDL_PollEvent(&(wm->eh->event))) {
+        switch(wm->eh->event.type) {
             case SDL_QUIT: 
-                eh->running = 0; 
+                wm->eh->running = 0; 
                 break;
             
             case SDL_KEYDOWN: 
-                if(eh->event.key.keysym.sym == SDLK_F11) {
-                    toggleFullscreen(eh, wm);
+                if(wm->eh->event.key.keysym.sym == SDLK_F11) {
+                    toggleFullscreen(wm);
                 }
-                if(eh->event.key.keysym.sym == SDLK_r) {
-                    eh->r = !eh->r;
+                if(wm->eh->event.key.keysym.sym == SDLK_r) {
+                    wm->eh->r = !wm->eh->r;
                 }
-                if(eh->event.key.keysym.sym == SDLK_n) {
-                    eh->n = (eh->n + 1) % 4;
+                if(wm->eh->event.key.keysym.sym == SDLK_n) {
+                    wm->eh->n = (wm->eh->n + 1) % 4;
                 }
-                if(eh->event.key.keysym.sym == SDLK_LSHIFT) {
-                    eh->shift = 1;
+                if(wm->eh->event.key.keysym.sym == SDLK_LSHIFT) {
+                    wm->eh->shift = 1;
                 }
                 break;
             case SDL_KEYUP:
-                if(eh->event.key.keysym.sym == SDLK_LSHIFT) {
-                    eh->shift = 0;
+                if(wm->eh->event.key.keysym.sym == SDLK_LSHIFT) {
+                    wm->eh->shift = 0;
                 }
                 break;
             
             case SDL_MOUSEBUTTONDOWN:
-                eh->mouseDown = 1;
-                if(eh->event.button.button == SDL_BUTTON_LEFT) eh->mouseMiddle = 1;
+                wm->eh->mouseDown = 1;
+                if(wm->eh->event.button.button == SDL_BUTTON_LEFT) wm->eh->mouseMiddle = 1;
                 break;
             case SDL_MOUSEBUTTONUP:
-                eh->mouseDown = 0;
-                if(eh->event.button.button == SDL_BUTTON_LEFT) eh->mouseMiddle = 0;
+                wm->eh->mouseDown = 0;
+                if(wm->eh->event.button.button == SDL_BUTTON_LEFT) wm->eh->mouseMiddle = 0;
                 break;
             
             case SDL_MOUSEWHEEL:
-                if (eh->event.wheel.y > 0) {
-                    eh->zoom = 1; // Zoom in
+                if (wm->eh->event.wheel.y > 0) {
+                    wm->eh->zoom = 1; // Zoom in
                 } 
-                else if (eh->event.wheel.y < 0) {
-                    eh->zoom = 2; // Zoom out
+                else if (wm->eh->event.wheel.y < 0) {
+                    wm->eh->zoom = 2; // Zoom out
                 }
                 break;
             
             case SDL_MOUSEMOTION:
-                eh->mouseMotionX = eh->event.motion.xrel;
-                eh->mouseMotionY = eh->event.motion.yrel;
+                wm->eh->mouseMotionX = wm->eh->event.motion.xrel;
+                wm->eh->mouseMotionY = wm->eh->event.motion.yrel;
                 break;
         }
     }
+
+    if(wm->eh->mouseDown) {
+        if(wm->eh->mouseMiddle) {
+            if(wm->eh->shift) {
+                // Pan
+                eye->x += -wm->eh->mouseMotionX * sensitivity;
+                eye->y += wm->eh->mouseMotionY * sensitivity/2*1.3f;
+                
+                target->x += -wm->eh->mouseMotionX * sensitivity;
+                target->y += wm->eh->mouseMotionY * sensitivity*1.3f;
+            }
+            else {
+                // Orbit
+                *angleX += -wm->eh->mouseMotionY * sensitivity;
+                *angleY += -wm->eh->mouseMotionX * sensitivity;
+            }
+        }
+    }
+
+    if (wm->eh->zoom == 1) {
+        eye->z -= 0.2f; // Zoom in
+    } 
+    else if (wm->eh->zoom == 2) {
+        eye->z += 0.2f; // Zoom out
+    }
 }
 
-void toggleFullscreen(EventH *eh, WindowModel *wm) {
-    eh->fullScreen = !eh->fullScreen;
+void toggleFullscreen(WindowModel *wm) {
+    wm->eh->fullScreen = !wm->eh->fullScreen;
 
-    if (eh->fullScreen) {
+    if (wm->eh->fullScreen) {
         SDL_SetWindowFullscreen(wm->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
         // SDL_ShowCursor(0);
     } else {
