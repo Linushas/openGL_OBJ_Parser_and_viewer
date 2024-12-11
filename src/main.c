@@ -42,7 +42,7 @@ typedef struct mat4x4 {
     float m[4][4];
 } Mat4x4;
 
-void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh);
+void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount);
 void getWindowEvents(EventH *eh, WindowModel *wm);
 void toggleFullscreen(EventH *eh, WindowModel *wm);
 int initializeWindow(WindowModel *wm);
@@ -65,20 +65,9 @@ int main(int argc, char *argv[]) {
     WindowModel wm;
     if(!initializeWindow(&wm)) return -1;
 
-
-    Mesh newMesh = parseOBJ("models/cube.obj");
-    printf("\nvertices:\n");
-    for(int m = 0; m < newMesh.vertexCount; m++)
-        printf("%f %f %f, %f %f %f, %f %f %f\n", newMesh.vertices[m].x, newMesh.vertices[m].y, newMesh.vertices[m].z, newMesh.vertices[m].r, newMesh.vertices[m].g, newMesh.vertices[m].b, newMesh.vertices[m].nx, newMesh.vertices[m].ny, newMesh.vertices[m].nz);
-    printf("\nindices:\n");
-    for(int m = 0; m < newMesh.indiceCount; m++){
-        if(m % 3 == 0) printf("\t");
-        if(m % 6 == 0) printf("\n");
-        printf("%d, ", newMesh.indices[m]);
-    }
-        
-
-
+    Mesh meshes[10];
+    meshes[0] = parseOBJ("models/ixo.obj");
+    int meshCount = 1;
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
@@ -139,17 +128,15 @@ int main(int argc, char *argv[]) {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view.m[0][0]);
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection.m[0][0]);
 
-        render(shaderProgram, &eh, &newMesh);
+        render(shaderProgram, &eh, meshes, meshCount);
 
         SDL_GL_SwapWindow(wm.win);
     }
 
-    // glDeleteVertexArrays(1, &cube2.VAO);
-    // glDeleteBuffers(1, &cube2.VBO);
-    // glDeleteVertexArrays(1, &tetra1.VAO);
-    // glDeleteBuffers(1, &tetra1.VBO);
-    destroyMesh(&newMesh);
-
+    for(int i = 0; i < meshCount; i++){
+        destroyMesh(&meshes[i]);
+    }
+    
     glDeleteProgram(shaderProgram);
     
     SDL_GL_DeleteContext(wm.glContext);
@@ -159,16 +146,18 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh) {
+void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount) {
     glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
-    if(eh->r) {
-        renderMesh(*mesh, GL_TRIANGLES);
-    } 
-    else {
-        renderMesh(*mesh, GL_LINE_LOOP);
-    } 
+    for(int i = 0; i < meshCount; i++) {
+        if(eh->r) {
+            renderMesh(mesh[i], GL_TRIANGLES);
+        } 
+        else {
+            renderMesh(mesh[i], GL_LINE_LOOP);
+        } 
+    }
     glBindVertexArray(0);
 }
 
