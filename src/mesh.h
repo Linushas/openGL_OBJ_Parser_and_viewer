@@ -1,6 +1,8 @@
 #ifndef MESH_H
 #define MESH_H
 
+#define POS(x,y,z) (float[]){x,y,z}
+
 #define OBJ_IXO_SPHERE "models/ixo.obj"
 #define OBJ_MONKEY "models/monkey.obj"
 #define OBJ_TORUS "models/torus.obj"

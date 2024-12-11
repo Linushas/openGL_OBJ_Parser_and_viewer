@@ -38,9 +38,9 @@ int main(int argc, char *argv[]) {
     Mesh meshes[10];
     int meshCount = 3;
 
-    meshes[0] = parseOBJ(OBJ_IXO_SPHERE, (float[]){0.0f, 0.0f, 0.0f}, "red", 0.5f);
-    meshes[1] = parseOBJ(OBJ_MONKEY, (float[]){2.0f, 0.0f, 0.0f}, "yellow", 1.0f);
-    meshes[2] = parseOBJ(OBJ_TORUS, (float[]){-2.0f, 0.0f, 0.0f}, "cyan", 1.0f);
+    meshes[0] = parseOBJ(OBJ_IXO_SPHERE, POS(0.0f, 0.0f, 0.0f), "red", 0.5f);
+    meshes[1] = parseOBJ(OBJ_MONKEY, POS(2.0f, 0.0f, 0.0f), "yellow", 1.0f);
+    meshes[2] = parseOBJ(OBJ_TORUS, POS(-2.0f, 0.0f, 0.0f), "cyan", 1.0f);
 
     unsigned int shaderProgram;
     loadShaders(&shaderProgram);
