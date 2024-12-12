@@ -106,7 +106,7 @@ Mesh parseOBJ(char* file, float *pos, char *color, float scale) {
     glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
-    glBindVertexArray(0); 
+    glBindVertexArray(0);
 
     return newMesh;
 }

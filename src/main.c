@@ -5,12 +5,13 @@
 #include "mesh.h"
 #include "math3d.h"
 
-typedef struct eventHandler {
+typedef struct eventHandler
+{
     SDL_Event event;
     int running;
     int fullScreen;
     int r, n;
-    int w,a,s,d;
+    int w, a, s, d;
     int zoom;
     float mouseMotionX, mouseMotionY;
     int mouseDown;
@@ -18,7 +19,8 @@ typedef struct eventHandler {
     int shift;
 } EventH;
 
-typedef struct windowModel {
+typedef struct windowModel
+{
     SDL_Window *win;
     SDL_GLContext glContext;
     EventH *eh;
@@ -30,9 +32,11 @@ void getWindowEvents(WindowModel *wm, Vertex *eye, Vertex *target, float *angleX
 void toggleFullscreen(WindowModel *wm);
 int initializeWindow(WindowModel *wm);
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     WindowModel wm;
-    if(!initializeWindow(&wm)) return -1;
+    if (!initializeWindow(&wm))
+        return -1;
     EventH eh = {.running = 1, .fullScreen = 0, .r = 0, .n = 0};
     wm.eh = &eh;
 
@@ -40,7 +44,7 @@ int main(int argc, char *argv[]) {
     int meshCount = 3;
     meshes[0] = parseOBJ(OBJ_IXO_SPHERE, POS(0.0f, 0.0f, 0.0f), "red", 0.5f);
     meshes[1] = parseOBJ(OBJ_MONKEY, POS(2.0f, 0.0f, 0.0f), "yellow", 1.0f);
-    meshes[2] = parseOBJ(OBJ_TORUS, POS(-2.0f, 0.0f, 0.0f), "cyan", 1.0f);
+    meshes[2] = parseOBJ("models/Helicopter.obj", POS(-2.0f, 0.0f, 0.0f), "cyan", 1.0f);
 
     loadShaders(&wm.shaderProgram);
 
@@ -51,10 +55,16 @@ int main(int argc, char *argv[]) {
     setupMatrices(&model, &view, &projection, wm.shaderProgram, eye, target, up);
     float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
 
-    while(wm.eh->running) {
+    while (wm.eh->running)
+    {
         getWindowEvents(&wm, &eye, &target, &angleX, &angleY);
 
-        // Set up light properties
+        if(target.x > meshes[0].pos[0] - 0.5f && target.x < meshes[0].pos[0] + 0.5f &&
+           target.y > meshes[0].pos[1] - 0.5f && target.y < meshes[0].pos[1] + 0.5f &&
+           target.z > meshes[0].pos[2] - 0.5f && target.z < meshes[0].pos[2] + 0.5f) {
+            // mesh in middle of screen, "selected"
+        }
+
         glUniform3f(glGetUniformLocation(wm.shaderProgram, "lightPos"), 1.8f, 6.0f, 8.0f);
         glUniform3f(glGetUniformLocation(wm.shaderProgram, "viewPos"), eye.x, eye.y, eye.z);
         glUniform3f(glGetUniformLocation(wm.shaderProgram, "lightColor"), 1.0f, 1.0f, 1.0f);
@@ -74,12 +84,13 @@ int main(int argc, char *argv[]) {
         SDL_GL_SwapWindow(wm.win);
     }
 
-    for(int i = 0; i < meshCount; i++){
+    for (int i = 0; i < meshCount; i++)
+    {
         destroyMesh(&meshes[i]);
     }
-    
+
     glDeleteProgram(wm.shaderProgram);
-    
+
     SDL_GL_DeleteContext(wm.glContext);
     SDL_DestroyWindow(wm.win);
     SDL_Quit();
@@ -87,88 +98,108 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount) {
+void render(unsigned int shaderProgram, EventH *eh, Mesh *mesh, int meshCount)
+{
     glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
-    for(int i = 0; i < meshCount; i++) {
-        if(eh->r) {
+    for (int i = 0; i < meshCount; i++)
+    {
+        if (eh->r)
+        {
             renderMesh(mesh[i], GL_TRIANGLES);
-        } 
-        else {
+        }
+        else
+        {
             renderMesh(mesh[i], GL_LINE_LOOP);
-        } 
+        }
     }
     glBindVertexArray(0);
 }
 
-void getWindowEvents(WindowModel *wm, Vertex *eye, Vertex *target, float *angleX, float *angleY) {
+void getWindowEvents(WindowModel *wm, Vertex *eye, Vertex *target, float *angleX, float *angleY)
+{
     wm->eh->zoom = 0;
     wm->eh->mouseMotionX = 0;
     wm->eh->mouseMotionY = 0;
 
-    while(SDL_PollEvent(&(wm->eh->event))) {
-        switch(wm->eh->event.type) {
-            case SDL_QUIT: 
-                wm->eh->running = 0; 
-                break;
-            
-            case SDL_KEYDOWN: 
-                if(wm->eh->event.key.keysym.sym == SDLK_F11) {
-                    toggleFullscreen(wm);
-                }
-                if(wm->eh->event.key.keysym.sym == SDLK_r) {
-                    wm->eh->r = !wm->eh->r;
-                }
-                if(wm->eh->event.key.keysym.sym == SDLK_n) {
-                    wm->eh->n = (wm->eh->n + 1) % 4;
-                }
-                if(wm->eh->event.key.keysym.sym == SDLK_LSHIFT) {
-                    wm->eh->shift = 1;
-                }
-                break;
-            case SDL_KEYUP:
-                if(wm->eh->event.key.keysym.sym == SDLK_LSHIFT) {
-                    wm->eh->shift = 0;
-                }
-                break;
-            
-            case SDL_MOUSEBUTTONDOWN:
-                wm->eh->mouseDown = 1;
-                if(wm->eh->event.button.button == SDL_BUTTON_LEFT) wm->eh->mouseMiddle = 1;
-                break;
-            case SDL_MOUSEBUTTONUP:
-                wm->eh->mouseDown = 0;
-                if(wm->eh->event.button.button == SDL_BUTTON_LEFT) wm->eh->mouseMiddle = 0;
-                break;
-            
-            case SDL_MOUSEWHEEL:
-                if (wm->eh->event.wheel.y > 0) {
-                    wm->eh->zoom = 1; // Zoom in
-                } 
-                else if (wm->eh->event.wheel.y < 0) {
-                    wm->eh->zoom = 2; // Zoom out
-                }
-                break;
-            
-            case SDL_MOUSEMOTION:
-                wm->eh->mouseMotionX = wm->eh->event.motion.xrel;
-                wm->eh->mouseMotionY = wm->eh->event.motion.yrel;
-                break;
+    while (SDL_PollEvent(&(wm->eh->event)))
+    {
+        switch (wm->eh->event.type)
+        {
+        case SDL_QUIT:
+            wm->eh->running = 0;
+            break;
+
+        case SDL_KEYDOWN:
+            if (wm->eh->event.key.keysym.sym == SDLK_F11)
+            {
+                toggleFullscreen(wm);
+            }
+            if (wm->eh->event.key.keysym.sym == SDLK_r)
+            {
+                wm->eh->r = !wm->eh->r;
+            }
+            if (wm->eh->event.key.keysym.sym == SDLK_n)
+            {
+                wm->eh->n = (wm->eh->n + 1) % 4;
+            }
+            if (wm->eh->event.key.keysym.sym == SDLK_LSHIFT)
+            {
+                wm->eh->shift = 1;
+            }
+            break;
+        case SDL_KEYUP:
+            if (wm->eh->event.key.keysym.sym == SDLK_LSHIFT)
+            {
+                wm->eh->shift = 0;
+            }
+            break;
+
+        case SDL_MOUSEBUTTONDOWN:
+            wm->eh->mouseDown = 1;
+            if (wm->eh->event.button.button == SDL_BUTTON_LEFT)
+                wm->eh->mouseMiddle = 1;
+            break;
+        case SDL_MOUSEBUTTONUP:
+            wm->eh->mouseDown = 0;
+            if (wm->eh->event.button.button == SDL_BUTTON_LEFT)
+                wm->eh->mouseMiddle = 0;
+            break;
+
+        case SDL_MOUSEWHEEL:
+            if (wm->eh->event.wheel.y > 0)
+            {
+                wm->eh->zoom = 1; // Zoom in
+            }
+            else if (wm->eh->event.wheel.y < 0)
+            {
+                wm->eh->zoom = 2; // Zoom out
+            }
+            break;
+
+        case SDL_MOUSEMOTION:
+            wm->eh->mouseMotionX = wm->eh->event.motion.xrel;
+            wm->eh->mouseMotionY = wm->eh->event.motion.yrel;
+            break;
         }
     }
 
-    if(wm->eh->mouseDown) {
-        if(wm->eh->mouseMiddle) {
-            if(wm->eh->shift) {
+    if (wm->eh->mouseDown)
+    {
+        if (wm->eh->mouseMiddle)
+        {
+            if (wm->eh->shift)
+            {
                 // Pan
                 eye->x += -wm->eh->mouseMotionX * sensitivity;
-                eye->y += wm->eh->mouseMotionY * sensitivity/2*1.3f;
-                
+                eye->y += wm->eh->mouseMotionY * sensitivity / 2 * 1.3f;
+
                 target->x += -wm->eh->mouseMotionX * sensitivity;
-                target->y += wm->eh->mouseMotionY * sensitivity*1.3f;
+                target->y += wm->eh->mouseMotionY * sensitivity * 1.3f;
             }
-            else {
+            else
+            {
                 // Orbit
                 *angleX += -wm->eh->mouseMotionY * sensitivity;
                 *angleY += -wm->eh->mouseMotionX * sensitivity;
@@ -176,21 +207,27 @@ void getWindowEvents(WindowModel *wm, Vertex *eye, Vertex *target, float *angleX
         }
     }
 
-    if (wm->eh->zoom == 1) {
-        eye->z -= 0.2f; // Zoom in
-    } 
-    else if (wm->eh->zoom == 2) {
-        eye->z += 0.2f; // Zoom out
+    if (wm->eh->zoom == 1)
+    {
+        eye->z -= 0.2f;
+    }
+    else if (wm->eh->zoom == 2)
+    {
+        eye->z += 0.2f;
     }
 }
 
-void toggleFullscreen(WindowModel *wm) {
+void toggleFullscreen(WindowModel *wm)
+{
     wm->eh->fullScreen = !wm->eh->fullScreen;
 
-    if (wm->eh->fullScreen) {
+    if (wm->eh->fullScreen)
+    {
         SDL_SetWindowFullscreen(wm->win, SDL_WINDOW_FULLSCREEN_DESKTOP);
         // SDL_ShowCursor(0);
-    } else {
+    }
+    else
+    {
         SDL_SetWindowFullscreen(wm->win, 0);
         // SDL_ShowCursor(1);
     }
@@ -200,8 +237,10 @@ void toggleFullscreen(WindowModel *wm) {
     glViewport(0, 0, width, height);
 }
 
-int initializeWindow(WindowModel *wm) {
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+int initializeWindow(WindowModel *wm)
+{
+    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+    {
         printf("error initializing SDL: %s\n", SDL_GetError());
         return 0;
     }
@@ -210,12 +249,13 @@ int initializeWindow(WindowModel *wm) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-    wm->win = SDL_CreateWindow("SDL2 3D Engine", 
-                                        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-                                        SW, SH, SDL_WINDOW_OPENGL);
+    wm->win = SDL_CreateWindow("SDL2 3D Engine",
+                               SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                               SW, SH, SDL_WINDOW_OPENGL);
 
     wm->glContext = SDL_GL_CreateContext(wm->win);
-    if (!wm->glContext) {
+    if (!wm->glContext)
+    {
         printf("Failed to create OpenGL context: %s\n", SDL_GetError());
         SDL_DestroyWindow(wm->win);
         SDL_Quit();
@@ -223,7 +263,8 @@ int initializeWindow(WindowModel *wm) {
     }
 
     glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) {
+    if (glewInit() != GLEW_OK)
+    {
         printf("Failed to initialize GLEW\n");
         SDL_GL_DeleteContext(wm->glContext);
         SDL_DestroyWindow(wm->win);

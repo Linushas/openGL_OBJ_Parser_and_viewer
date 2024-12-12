@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "math3d.h"
 
+
 Vertex normalize(Vertex v) {
     float magnitude = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
     Vertex normalized = { v.x / magnitude, v.y / magnitude, v.z / magnitude };
