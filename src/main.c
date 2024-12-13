@@ -19,11 +19,18 @@ typedef struct eventHandler
     int shift;
 } EventH;
 
+typedef struct camera {
+    Mat4x4 model, view, projection;
+    Vertex eye, target, up;
+    float angleX, angleY, angleZ;
+} Camera;
+
 typedef struct windowModel
 {
     SDL_Window *win;
     SDL_GLContext glContext;
     EventH *eh;
+    Camera *cam;
     unsigned int shaderProgram;
 } WindowModel;
 
@@ -32,13 +39,32 @@ void getWindowEvents(WindowModel *wm, Vertex *eye, Vertex *target, float *angleX
 void toggleFullscreen(WindowModel *wm);
 int initializeWindow(WindowModel *wm);
 
+Camera setupCamera() {
+    Mat4x4 model = {0}, view = {0}, projection = {0};
+    Vertex eye = {0.0f, 0.0f, 4.0f};
+    Vertex target = {0.0f, 0.0f, 0.0f};
+    Vertex up = {0.0f, 1.0f, 0.0f};
+    float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
+
+    Camera cam = {
+        .model = model, .view = view, .projection = projection,
+        .eye = eye, .target = target, .up = up, 
+        .angleX = angleX, .angleY = angleY, .angleZ = angleZ
+    };
+    return cam;
+}
+
 int main(int argc, char *argv[])
-{
+{   
     WindowModel wm;
     if (!initializeWindow(&wm))
         return -1;
     EventH eh = {.running = 1, .fullScreen = 0, .r = 0, .n = 0};
+    Camera cam = setupCamera();
     wm.eh = &eh;
+    wm.cam = &cam;
+
+    setupMatrices(&cam.model, &cam.view, &cam.projection, wm.shaderProgram, cam.eye, cam.target, cam.up);
 
     Mesh meshes[10];
     int meshCount = 3;
@@ -47,38 +73,25 @@ int main(int argc, char *argv[])
     meshes[2] = parseOBJ("models/Helicopter.obj", POS(-2.0f, 0.0f, 0.0f), "cyan", 1.0f);
 
     loadShaders(&wm.shaderProgram);
-
-    Mat4x4 model = {0}, view = {0}, projection = {0};
-    Vertex eye = {0.0f, 0.0f, 4.0f};
-    Vertex target = {0.0f, 0.0f, 0.0f};
-    Vertex up = {0.0f, 1.0f, 0.0f};
-    setupMatrices(&model, &view, &projection, wm.shaderProgram, eye, target, up);
-    float angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
-
+    
     while (wm.eh->running)
     {
-        getWindowEvents(&wm, &eye, &target, &angleX, &angleY);
+        getWindowEvents(&wm, &cam.eye, &cam.target, &cam.angleX, &cam.angleY);
 
-        if(target.x > meshes[0].pos[0] - 0.5f && target.x < meshes[0].pos[0] + 0.5f &&
-           target.y > meshes[0].pos[1] - 0.5f && target.y < meshes[0].pos[1] + 0.5f &&
-           target.z > meshes[0].pos[2] - 0.5f && target.z < meshes[0].pos[2] + 0.5f) {
-            // mesh in middle of screen, "selected"
-        }
-
-        glUniform3f(glGetUniformLocation(wm.shaderProgram, "lightPos"), 1.8f, 6.0f, 8.0f);
-        glUniform3f(glGetUniformLocation(wm.shaderProgram, "viewPos"), eye.x, eye.y, eye.z);
+        glUniform3f(glGetUniformLocation(wm.shaderProgram, "lightPos"), 6.0f, 2.0f, 6.0f);
         glUniform3f(glGetUniformLocation(wm.shaderProgram, "lightColor"), 1.0f, 1.0f, 1.0f);
         glUniform3f(glGetUniformLocation(wm.shaderProgram, "objectColor"), 0.5f, 0.5f, 0.5f);
+        glUniform3f(glGetUniformLocation(wm.shaderProgram, "viewPos"), cam.eye.x, cam.eye.y, cam.eye.z);
 
-        setupMatrices(&model, &view, &projection, wm.shaderProgram, eye, target, up);
-        createRotationMatrix(&model, angleX, angleY, angleZ);
+        setupMatrices(&cam.model, &cam.view, &cam.projection, wm.shaderProgram, cam.eye, cam.target, cam.up);
+        createRotationMatrix(&cam.model, cam.angleX, cam.angleY, cam.angleZ);
 
         unsigned int modelLoc = glGetUniformLocation(wm.shaderProgram, "model");
         unsigned int viewLoc = glGetUniformLocation(wm.shaderProgram, "view");
         unsigned int projLoc = glGetUniformLocation(wm.shaderProgram, "projection");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model.m[0][0]);
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view.m[0][0]);
-        glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection.m[0][0]);
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &cam.model.m[0][0]);
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &cam.view.m[0][0]);
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, &cam.projection.m[0][0]);
 
         render(wm.shaderProgram, wm.eh, meshes, meshCount);
         SDL_GL_SwapWindow(wm.win);
@@ -193,7 +206,7 @@ void getWindowEvents(WindowModel *wm, Vertex *eye, Vertex *target, float *angleX
             {
                 // Pan
                 eye->x += -wm->eh->mouseMotionX * sensitivity;
-                eye->y += wm->eh->mouseMotionY * sensitivity / 2 * 1.3f;
+                eye->y += wm->eh->mouseMotionY * sensitivity * 1.3f;
 
                 target->x += -wm->eh->mouseMotionX * sensitivity;
                 target->y += wm->eh->mouseMotionY * sensitivity * 1.3f;

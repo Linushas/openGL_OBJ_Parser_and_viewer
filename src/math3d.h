@@ -15,6 +15,10 @@
 #define FPS         60  
 #define sensitivity 0.01f
 
+typedef struct vec3d {
+    float x, y, z;
+} Vec3d;
+
 typedef struct mat4x4 {
     float m[4][4];
 } Mat4x4;
